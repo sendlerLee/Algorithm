@@ -42,7 +42,7 @@ struct Problem
 };
 struct Option
 {
-    Option() : nr_iter(100), nr_lr(0.002), nr_reg(0.002), feat_threshold(0.001) {}
+    Option() : nr_iter(100), nr_lr(0.002), nr_reg(0), feat_threshold(0.001) {}
     std::string Tr_path, Va_path, Va_out_path;
     int nr_iter;
     double nr_lr, nr_reg, feat_threshold;
@@ -139,8 +139,9 @@ bool mysortfunc(const pair<string, double>& a, const pair<string, double>& b)
 }
 
 double sign(double w){
-	if(w > 0) return 1;
-	else return -1;
+	if(w > opt.feat_threshold) return 1;
+	else if(w < -opt.feat_threshold)return -1;
+	else return 0;
 }
 
 void writeWeightFile(Problem& Tr)
@@ -326,7 +327,7 @@ double getSigma(Problem& Tr) {
 	{
 		int yi = Tr.Y[i];
 		double bidPrice = Tr.B[i];
-		observed.push_back(yi *  bidPrice);
+		if(yi == 1)	observed.push_back(bidPrice);
 	}
 	return getStdev(observed);
 }
@@ -354,12 +355,6 @@ int main(int const argc, char const * const * const argv)
 	loadTestInstance(Tr, Va, testfile);
 	cout << "Load Data Finish, numTestInstance:" << Va.nr_instance << endl;
 
-	vector<int> trainidxvec(Tr.nr_instance);
-	
-        for (int idx = 0; idx < Tr.nr_instance; idx += 1) 
-		trainidxvec[idx] = idx;
-
-
 	Tr.Xhat.resize(Tr.nr_field, vector<pair<int, double>>());
         for (int i = 0; i < Tr.nr_instance; i += 1)
         {
@@ -373,16 +368,14 @@ int main(int const argc, char const * const * const argv)
 
         for (int f = 0; f < Tr.nr_field; f += 1) Tr.Xhat[f].shrink_to_fit();
 //	double sum = std::accumulate(std::begin(trainpricevec), std::end(resultSet), 0.0);
-	cout << "iter\ttr_loss\tva_loss\ttr_mse\tva_mse" << endl;
 	double sigma = getSigma(Tr);
+	cout << "iter\ttr_loss\tva_loss\ttr_mse\tva_mse\t" << sigma << endl;
   	for (int iter = 0; iter < opt.nr_iter; iter += 1)
 	{
-		std::random_shuffle(trainidxvec.begin(), trainidxvec.end());
 		vector<double> trFVec(Tr.nr_instance,0);
 		#pragma omp parallel for schedule(dynamic)
-		for (int idx = 0; idx < trainidxvec.size(); idx += 1) 
+		for (int i = 0; i < Tr.nr_instance; i += 1) 
 		{
-			int i = trainidxvec[idx];
 			for (map<int, double>::iterator it = Tr.X[i].begin(); it != Tr.X[i].end(); ++it)
 			{
 				int f = it->first;
@@ -400,10 +393,11 @@ int main(int const argc, char const * const * const argv)
 				pair<int, double>& ins = Tr.Xhat[f][j];
 				int i = ins.first;
 				double x = ins.second;
-				double dn = Tr.Y[i] * (Tr.B[i] - trFVec[i]) / sigma + (1 - Tr.Y[i]) * (trFVec[i] - Tr.B[i])/sigma;
-				if(dn < -3) dn = -3;
-				if(dn > 3) dn = 3;
-				gradientVec[f] += (Tr.Y[i] * dn * x / sigma) +(1 - Tr.Y[i]) * dnorm(dn,0,sigma)/pnorm(dn) * x / sigma;
+				double z = (trFVec[i] - Tr.B[i])/sigma;
+				if(z < -3) z = -3;
+				if(z > 3) z = 3;
+				double dpnorm = -exp(log(dnorm(z,0,1)) - log(pnorm(z)));
+				gradientVec[f] += (Tr.Y[i] * z * x / sigma) +(1 - Tr.Y[i]) * dpnorm * x / sigma;
 			}
 		}
 
@@ -411,7 +405,7 @@ int main(int const argc, char const * const * const argv)
 		#pragma omp parallel for schedule(static) reduction(+: wnum)
 		for (int i = 0;i < Tr.W.size(); i += 1)
 		{
-			Tr.W[i] += opt.nr_lr * gradientVec[i] - opt.nr_reg * Tr.W[i];
+			Tr.W[i] += - opt.nr_lr * gradientVec[i] + opt.nr_reg * Tr.W[i];
 			if (fabs(Tr.W[i]) < opt.feat_threshold)
 			{
 				Tr.W[i] = 0;
@@ -434,8 +428,10 @@ int main(int const argc, char const * const * const argv)
 				Fi += Tr.W[f] * x;
 			}
 			Tr.F[i] = Fi;
-			double dn = yi * (bidprice - Fi)/sigma + (1 - yi) * (Fi - bidprice)/sigma;
-			trainloss += - (yi * log(dnorm(dn,0,sigma)) + (1 - yi) * log(pnorm(dn)));
+			double z = (Fi - bidprice)/sigma;
+			if(z < -3) z = -3;
+                        if(z > 3) z = 3;
+			trainloss += - (yi * log(dnorm(z,0,1)) + (1 - yi) * log(pnorm(z)));
 			trainmse += (bidprice - Tr.F[i]) * (bidprice - Tr.F[i]);
 		}
 		trainloss /= Tr.nr_instance;
@@ -459,8 +455,10 @@ int main(int const argc, char const * const * const argv)
 				Fi += Tr.W[f] * x;
 			}
 			Va.F[i] = Fi;
-			double dn = yi * (bidprice - Fi)/sigma + (1 - yi) * (Fi - bidprice)/sigma;
-			testloss += - (yi * log(dnorm(dn,0,sigma)) + (1 - yi) * log(pnorm(dn)));
+			double z = (Fi - bidprice)/sigma;
+			if(z < -3) z = -3;
+                        if(z > 3) z = 3;
+			testloss += - (yi * log(dnorm(z,0,1)) + (1 - yi) * log(pnorm(z)));
 			testmse += (bidprice - Va.F[i]) * (bidprice - Va.F[i]);
 		}
 		testloss /= Va.nr_instance;
