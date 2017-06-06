@@ -1,0 +1,4 @@
+#global bias W0
+0
+#unary interactions Wj
+#pairwise interactions Vj,f
