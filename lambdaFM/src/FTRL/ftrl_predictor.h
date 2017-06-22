@@ -10,7 +10,7 @@ class ftrl_predictor : public pc_task
 {
 public:
     ftrl_predictor(double _factor_num, ifstream& _fModel, ofstream& _fPredict);
-    virtual void run_task(vector<string>& dataBuffer);
+    virtual void run_task(vector<vector<fm_sample> >& dataBuffer);
 private:
     ftrl_model* pModel;
     ofstream& fPredict;

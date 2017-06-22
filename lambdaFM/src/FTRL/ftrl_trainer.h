@@ -1,6 +1,7 @@
 #ifndef FTRL_TRAINER_H_
 #define FTRL_TRAINER_H_
 
+#include <algorithm>
 #include "../Frame/pc_frame.h"
 #include "ftrl_model.h"
 #include "../Sample/fm_sample.h"

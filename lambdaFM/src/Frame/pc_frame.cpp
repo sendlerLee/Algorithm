@@ -1,4 +1,5 @@
 #include "pc_frame.h"
+#include "../Sample/fm_sample.h"
 
 bool pc_frame::init(pc_task& task, int t_num, int buf_size, int log_num)
 {
@@ -81,7 +82,7 @@ void pc_frame::proThread()
 
 void pc_frame::conThread(){
     bool finished_flag = false;
-    vector<vector<fm_sample>> input_vec;
+    vector<vector<fm_sample> > input_vec;
     input_vec.reserve(buffer.size());
     while(true)
     {
