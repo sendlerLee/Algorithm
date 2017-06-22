@@ -34,6 +34,9 @@ void pc_frame::proThread()
     bool finished_flag = false;
     string lastID = "";
     vector<fm_sample> samples;
+    string className = typeid (*pTask).name();
+    size_t position = className.find("predictor");
+    cout << "class name is : " << className << " " << (position != string::npos) << endl;
     while(true)
     {
         sem_wait(&semPro);
@@ -49,7 +52,7 @@ void pc_frame::proThread()
             fm_sample sample(line);
             //cout << lastID << "====== " << sample.queryId << "======== " << sample.y << endl;
             if(!lastID.empty() && lastID != sample.queryId){
-                if(hasRef) {
+                if(hasRef || (position == string::npos)) {
                     buffer.push(samples);
                     line_num ++; 
                     if(line_num%logNum == 0)

@@ -102,7 +102,7 @@ public:
     ftrl_model_unit* getOrInitModelUnit(string index);
     ftrl_model_unit* getOrInitModelUnitBias();
 
-    double predict(const vector<pair<string, double> >& x, double bias, vector<ftrl_model_unit*>& theta, vector<double>& sum);
+    double predict(const vector<pair<string, double> >& x, double bias, map<string,ftrl_model_unit*>& theta, vector<double>& sum);
     double getScore(const vector<pair<string, double> >& x, double bias, unordered_map<string, ftrl_model_unit*>& theta);
     void outputModel(ofstream& out);
     bool loadModel(ifstream& in);
@@ -164,13 +164,13 @@ ftrl_model_unit* ftrl_model::getOrInitModelUnitBias()
 }
 
 
-double ftrl_model::predict(const vector<pair<string, double> >& x, double bias, vector<ftrl_model_unit*>& theta, vector<double>& sum)
+double ftrl_model::predict(const vector<pair<string, double> >& x, double bias, map<string, ftrl_model_unit*>& theta, vector<double>& sum)
 {
     double result = 0;
     result += bias;
     for(int i = 0; i < x.size(); ++i)
     {
-        result += theta[i]->wi * x[i].second;
+        result += theta[x[i].first]->wi * x[i].second;
     }
     double sum_sqr, d;
     for(int f = 0; f < factor_num; ++f)
@@ -178,7 +178,7 @@ double ftrl_model::predict(const vector<pair<string, double> >& x, double bias, 
         sum[f] = sum_sqr = 0.0;
         for(int i = 0; i < x.size(); ++i)
         {
-            d = theta[i]->vi[f] * x[i].second;
+            d = theta[x[i].first]->vi[f] * x[i].second;
             sum[f] += d;
             sum_sqr += d * d;
         }

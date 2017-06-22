@@ -28,21 +28,23 @@ ftrl_predictor::ftrl_predictor(double _factor_num, ifstream& _fModel, ofstream& 
     }
 }
 
-void ftrl_predictor::run_task(vector<string>& dataBuffer)
+void ftrl_predictor::run_task(vector<vector<fm_sample> >& dataBuffer)
 {
-    vector<string> outputVec(dataBuffer.size());
     for(int i = 0; i < dataBuffer.size(); ++i)
     {
-        fm_sample sample(dataBuffer[i]);
-        double score = pModel->getScore(sample.x, pModel->muBias->wi, pModel->muMap);
-        outputVec[i] = to_string(sample.y) + " " + to_string(score);
+        vector<string> outputVec(dataBuffer[i].size());
+        for(int j = 0; j < dataBuffer[i].size(); ++j) {
+            fm_sample sample = dataBuffer[i][j];
+            double score = pModel->getScore(sample.x, pModel->muBias->wi, pModel->muMap);
+            outputVec[i] = to_string(sample.y) + " " + to_string(score);
+        }
+        outMtx.lock();
+        for(int i = 0; i < outputVec.size(); ++i)
+        {
+            fPredict << outputVec[i] << endl;
+        }
+        outMtx.unlock();
     }
-    outMtx.lock();
-    for(int i = 0; i < outputVec.size(); ++i)
-    {
-        fPredict << outputVec[i] << endl;
-    }
-    outMtx.unlock();
 }
 
 
