@@ -5,7 +5,7 @@ int main()
 {
     test_task task;
     pc_frame frame;
-    frame.init(task, 1, 50, 10000);
+    frame.init(task, 3, 50, 10000);
     frame.run();
     return 0;
 }

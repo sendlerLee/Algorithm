@@ -134,7 +134,7 @@ class ftrl_trainer : public pc_task
 {
 public:
     ftrl_trainer(const trainer_option& opt);
-    virtual void run_task(vector<fm_sample>& dataBuffer);
+    virtual void run_task(vector<vector<fm_sample>>& dataBuffer);
     bool loadModel(ifstream& in);
     void outputModel(ofstream& out);
 private:
@@ -150,18 +150,15 @@ private:
 
 bool mysortfunc(const pair<int, double>& a, const pair<int, double>& b)
 {
-    return a.second > b.second;
+    return a.second < b.second;
 }
 
 double getIdealDCG(vector<int> rel) {
     sort(rel.begin(),rel.end(), greater<int>());
     double dcg = 0.0;
-    //cout << "idealDcg rank : ";
     for(int i = 1; i <= rel.size(); i++) {
-        //cout << rel[i - 1] << " ";
         dcg += (pow(2.0,rel[i - 1]) - 1) / log2(i + 1);
     }
-    //cout << dcg << endl;
     return dcg;
 }
 
@@ -172,11 +169,6 @@ void swapChange(const vector<fm_sample>& samples,const vector<pair<int, double> 
         rel.push_back(samples[index].y);
     }
     double idealDcg = getIdealDCG(rel);
-   // cout << "origin rel : ";
-    //for(int i = 1; i <= rel.size(); i++) {
-    //    cout << rel[i - 1] << " ";
-    //}
-    //cout << endl;
     
     if(idealDcg > 0) {
         for(int i = 1; i <= rel.size(); i++) {
@@ -203,10 +195,11 @@ ftrl_trainer::ftrl_trainer(const trainer_option& opt)
     pModel = new ftrl_model(opt.factor_num, opt.init_mean, opt.init_stdev);
 }
 
-void ftrl_trainer::run_task(vector<fm_sample>& dataBuffer)
+void ftrl_trainer::run_task(vector<vector<fm_sample> >& dataBuffer)
 {
-    if(dataBuffer.size() > 0) {
-        train(dataBuffer);
+    for(int i = 0; i < dataBuffer.size(); ++i)
+    {
+        train(dataBuffer[i]);
     }
 }
 
@@ -300,26 +293,9 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
     }
 
     sort(estimateY.begin(), estimateY.end(), mysortfunc);
-    /**
-    for(int m = 0; m < estimateY.size(); m++) {
-        int indexM = estimateY[m].first;
-        double wxM = estimateY[m].second;
-        cout << samples[indexM].queryId << " " << samples[indexM].y << " " << indexM << " " << wxM << endl;
-    }*/
     vector<vector<double> > weights(samples.size(),vector<double>(samples.size(),0));
     swapChange(samples,estimateY,weights);
-    /**
-    for(int i = 0; i < weights.size(); i++) {
-        int indexM = estimateY[i].first;
-        cout << samples[indexM].queryId << " " << samples[indexM].y << " ";
-        for(int j = 0; j < weights[i].size(); j++) {
-            int indexN = estimateY[j].first;
-            if(i == j) continue;
-            cout << "weights[" << i << "][" << j << "]: " << (samples[indexM].y - samples[indexN].y) * abs(weights[i][j]) << " ";
-        }
-        cout << endl;
-    }*/
-    
+
     map<string,pair<double,double> > features;
     for(int m = 0; m < estimateY.size(); m++) {
         int indexM = estimateY[m].first;
@@ -331,7 +307,6 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
             features.insert(make_pair(featureM[i].first,make_pair(featureM[i].second,0.0)));
         }
 
-        //cout << samples[indexM].queryId << " " << yM << " ";
         for(int n = 0; n < estimateY.size(); n++) {
             int indexN = estimateY[n].first;
             double wxN = estimateY[n].second;
@@ -351,8 +326,7 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
             features.insert(make_pair("bias",make_pair(1.0,1.0)));
             int sign = yM > yN ? 1 : -1;
             double delta_NDCG = sign * abs(weights[m][n]);
-            double lambda = -1 * sign / (1 + exp(wxM - wxN));
-            //cout << "weights[" << m << "][" << n << "]: " << lambda * delta_NDCG << " ";
+            double lambda = -1 / (1 + exp(wxM - wxN));
  
             //update w_n, w_z
             for(map<string,pair<double,double> >::iterator iter = features.begin(); iter != features.end(); ++iter)
@@ -375,7 +349,7 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
             for(map<string,pair<double,double> >::iterator iter = features.begin(); iter != features.end(); ++iter)
             {
                 string index = iter -> first;
-                if(index == "bias") continue;
+                if(index == "bias") continue
                 pair<double, double> value = iter -> second;
                 ftrl_model_unit& mu = *(pModel->getOrInitModelUnit(index));
                 for(int f = 0; f < pModel->factor_num; ++f)
@@ -398,7 +372,6 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
             }
 
         }
-        //cout << endl;
     }    
     //////////
     //pModel->debugPrintModel();

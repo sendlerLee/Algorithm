@@ -208,8 +208,7 @@ double ftrl_model::getScore(const vector<pair<string, double> >& x, double bias,
         }
         result += 0.5 * (sum * sum - sum_sqr);
     }
-    //return 1.0/(1.0 + exp(-result));
-    return result;
+    return 1.0/(1.0 + exp(-result));
 }
 
 

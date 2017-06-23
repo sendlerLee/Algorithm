@@ -9,20 +9,18 @@ using namespace std;
 class test_task : public pc_task
 {
 public:
+    int line_num = 0;
     test_task(){}
-    virtual void run_task(vector<vector<fm_sample>>& dataBuffer)
+    virtual void run_task(vector<fm_sample>& dataBuffer)
     {
-        cout <<" ==========\n";
-        for(int i = 0; i < dataBuffer.size(); ++i)
-        {
-            cout << dataBuffer[i].size() << " " ;
-            for(int j = 0; j < dataBuffer[i].size();j++) {
-                fm_sample s = dataBuffer[i][j];
-                cout << s.y << "===" << s.queryId << " ";
-            }
-            cout << endl;
+        line_num += dataBuffer.size();
+        cout << dataBuffer.size() << " " << dataBuffer[0].queryId;
+        for(int j = 0; j < dataBuffer.size();j++) {
+            fm_sample s = dataBuffer[j];
+           // cout << s.y << "===" << s.queryId << " ";
         }
-        cout << "**********\n";
+        cout << endl;
+        cout << ">>>>>>>>>>>>>" << line_num << endl;
     }
 };
 

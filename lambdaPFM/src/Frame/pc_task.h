@@ -12,7 +12,7 @@ class pc_task
 {
 public:
     pc_task(){}
-    virtual void run_task(vector<fm_sample>& dataBuffer) = 0;
+    virtual void run_task(vector<vector<fm_sample> >& dataBuffer) = 0;
 };
 
 
