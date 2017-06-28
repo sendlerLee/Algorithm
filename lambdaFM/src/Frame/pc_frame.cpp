@@ -23,17 +23,18 @@ void pc_frame::run()
     bool hasRef = false;
     while(getline(cin, line))
     {
+        //cout << line << endl;
         fm_sample sample(line);
-        if(position != string::npos) line_num ++;
+        //cout << sample.y << " " << sample.queryId << endl;
         if(!lastID.empty() && lastID != sample.queryId)
         {
             if(hasRef || (position != string::npos)) 
             {
-                if(position == string::npos) line_num ++; 
+                line_num ++; 
                 pTask->run_task(samples);
                 if(line_num%logNum == 0)
                 {
-                    cout << line_num << " samples have finished" << endl;
+                    cout << line_num << " query samples have finished." << "\r";
                 }
             }
             samples.clear();
@@ -47,10 +48,10 @@ void pc_frame::run()
     }
     if(hasRef || (position != string::npos))
     {
-        if(position == string::npos) line_num ++; 
+        line_num ++; 
         pTask->run_task(samples);
     }
-    cout <<"total " << line_num << " samples have finished" << endl;
+    cout <<"total " << line_num << " query samples have finished." << endl;
 }
 
 void pc_frame::conThread(){
