@@ -69,32 +69,16 @@ public:
         os << mu.wi;
         for(int f = 0; f < mu.vi.size(); ++f)
         {
-            if(mu.vi[f] < 1e-10){
-                os << " " << 0;
-            }else {
-                os << " " << mu.vi[f];
-            }
+            os << " " << mu.vi[f];
         }
-        if(mu.w_ni < 1e-10) {
-            os << " " << 0 << " " << mu.w_zi;
-        } else {
-            os << " " << mu.w_ni << " " << mu.w_zi;
-        }
+        os << " " << mu.w_ni << " " << mu.w_zi;
         for(int f = 0; f < mu.v_ni.size(); ++f)
         {
-            if(mu.v_ni[f] < 1e-10) {
-                os << " " << 0;
-            }else {
-                os << " " << mu.v_ni[f];
-            }
+            os << " " << mu.v_ni[f];
         }
         for(int f = 0; f < mu.v_zi.size(); ++f)
         {
-            if(mu.v_zi[f] < 1e-10) {
-                os << " " << 0;
-            }else {
-                os << " " << mu.v_zi[f];
-           }
+            os << " " << mu.v_zi[f];
         }
         return os;
     }
@@ -298,11 +282,8 @@ bool ftrl_model::loadModel(ifstream& in)
         return false;
     }
     muBias = new ftrl_model_unit(0, strVec);
-    int i = 1;
     while(getline(in, line))
     {
-        i ++;
-        //cout << i << endl;
         strVec.clear();
         utils::splitString(line, ' ', &strVec);
         if(strVec.size() != 3 * factor_num + 4)

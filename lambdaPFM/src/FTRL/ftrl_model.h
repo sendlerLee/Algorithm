@@ -63,7 +63,7 @@ public:
             vi[f] = utils::gaussian(v_mean, v_stdev);
         }
     }
-
+     
     friend inline ostream& operator <<(ostream& os, const ftrl_model_unit& mu)
     {
         os << mu.wi;
@@ -82,6 +82,7 @@ public:
         }
         return os;
     }
+   
 };
 
 
@@ -208,7 +209,8 @@ double ftrl_model::getScore(const vector<pair<string, double> >& x, double bias,
         }
         result += 0.5 * (sum * sum - sum_sqr);
     }
-    return 1.0/(1.0 + exp(-result));
+    //return 1.0/(1.0 + exp(-result));
+    return result;
 }
 
 

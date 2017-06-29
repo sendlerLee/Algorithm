@@ -10,7 +10,7 @@
 
 struct trainer_option
 {
-    trainer_option() : k0(true), k1(true), factor_num(8), init_mean(0.0), init_stdev(0.01), w_alpha(0.01), w_beta(1.0), w_l1(0.1), w_l2(5.0),
+    trainer_option() : k0(true), k1(true), factor_num(8), init_mean(0.0), init_stdev(0.1), w_alpha(0.01), w_beta(1.0), w_l1(0.1), w_l2(5.0),
                v_alpha(0.01), v_beta(1.0), v_l1(0.1), v_l2(5.0), 
                threads_num(1), b_init(false), force_v_sparse(false) {}
     string model_path, init_m_path;
@@ -297,8 +297,7 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
             features.insert(make_pair("bias",make_pair(1.0,1.0)));
             int sign = yM > yN ? 1 : -1;
             double delta_NDCG = sign * abs(weights[m][n]);
-            double lambda = - 1.0  / (1 + exp(sign * (wxM - wxN))) * delta_NDCG;
-            //cout << "weights[" << m << "][" << n << "]: " << lambda * delta_NDCG << " ";
+            double lambda = -1.0 / (1 + exp(sign * (wxM - wxN))) * delta_NDCG;
  
             //update w_n, w_z
             for(map<string,pair<double,double> >::iterator iter = features.begin(); iter != features.end(); ++iter)
@@ -341,7 +340,7 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
                     double& vif = mu.vi[f];
                     double& v_nif = mu.v_ni[f];
                     double& v_zif = mu.v_zi[f];
-                    double v_gif = lambda * ((factorSum[indexM][f] * value.first - vif * value.first * value.first) - (factorSum[indexN][f] * value.second - vif * value.second * value.second)) ;
+                    double v_gif = lambda * ((factorSum[indexM][f] * value.first - vif * value.first * value.first) - (factorSum[indexN][f] * value.second - vif * value.second * value.second));
                     //cout << ">>>>>>>>>>>>>>" << ((factorSum[indexM][f] * value.first - vif * value.first * value.first) - (factorSum[indexN][f] * value.second - vif * value.second * value.second)) << endl;
                     double v_sif = 1 / v_alpha * (sqrt(v_nif + v_gif * v_gif) - sqrt(v_nif));
                     v_zif += v_gif - v_sif * vif;

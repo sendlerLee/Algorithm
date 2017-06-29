@@ -37,48 +37,38 @@ void pc_frame::proThread()
     vector<fm_sample> samples;
     string className = typeid (*pTask).name();
     size_t position = className.find("predictor");
-    cout << "class name is : " << className << " " << (position != string::npos) << endl;
-    while(true)
+    //cout << "class name is : " << className << " " << (position != string::npos) << endl;
+    bool hasRef = false;
+    while(getline(cin, line))
     {
-        sem_wait(&semPro);
-        bufMtx.lock();
-        bool hasRef = false;
-        while(true)
-        {
-            if(!getline(cin, line))
-            {
-                finished_flag = true;
-                break;
-            }
-            fm_sample sample(line);
-            //cout << lastID << "====== " << sample.queryId << "======== " << sample.y << endl;
-            if(!lastID.empty() && lastID != sample.queryId){
-                if(hasRef || (position != string::npos)) {
-                    buffer.push(samples);
-                    line_num ++; 
-                    if(line_num%logNum == 0)
-                    {
-                        cout << line_num << " samples have finished" << endl;
-                    }
+        fm_sample sample(line);
+        //cout << lastID << "====== " << sample.queryId << "======== " << sample.y << endl;
+        if(!lastID.empty() && lastID != sample.queryId){
+            if(hasRef || (position != string::npos)) {
+                line_num ++; 
+                buffer.push(samples);
+                if(line_num%logNum == 0)
+                {
+                    cout << line_num << " query samples have finished" << "\r";
                 }
-                bufMtx.unlock();
-                sem_post(&semCon);
-                samples.clear();
-                hasRef = false;
             }
-            lastID = sample.queryId;
-            if(sample.y > 0) {
-                hasRef = true;
-            }
-            samples.push_back(sample);
-        }
-        if(finished_flag)
-        {
-            buffer.push(samples);
-            bufMtx.unlock();
             sem_post(&semCon);
-            break;
+            samples.clear();
+            hasRef = false;
         }
+        lastID = sample.queryId;
+        if(sample.y > 0) {
+            hasRef = true;
+        }
+        samples.push_back(sample);
+    }
+    if(hasRef || (position != string::npos))
+    {
+        line_num ++;
+        finished_flag = true;
+        buffer.push(samples);
+        sem_post(&semCon);
+        cout <<"total " << line_num << " query samples have finished" << endl;
     }
 }
 
@@ -101,8 +91,9 @@ void pc_frame::conThread(){
         if(input_vec.size() > 0) {
             pTask->run_task(input_vec);
         }
-        if(finished_flag)
+        if(finished_flag) {
             break;
+        }
     }
     sem_post(&semCon);
 }
