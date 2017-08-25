@@ -9,13 +9,16 @@
 #include <cmath>
 #include "../Utils/utils.h"
 
+#if defined USEOMP
+#include <omp.h>
+#endif
+
 using namespace std;
 
 //每一个特征维度的模型单元
 class ftrl_model_unit
 {
-public:
-    double wi;
+public: double wi;
     double w_ni;
     double w_zi;
     vector<double> vi;
@@ -25,12 +28,9 @@ public:
 public:
     ftrl_model_unit(int factor_num, double v_mean, double v_stdev)
     {
-        wi = 0.0;
-        w_ni = 0.0;
-        w_zi = 0.0;
         vi.resize(factor_num);
         v_ni.resize(factor_num);
-        v_zi.resize(factor_num);
+        v_zi.resize(factor_num); 
         for(int f = 0; f < factor_num; ++f)
         {
             vi[f] = utils::gaussian(v_mean, v_stdev);
@@ -44,14 +44,11 @@ public:
         vi.resize(factor_num);
         v_ni.resize(factor_num);
         v_zi.resize(factor_num);
-        wi = stod(modelLineSeg[1]);
-        w_ni = stod(modelLineSeg[2 + factor_num]);
-        w_zi = stod(modelLineSeg[3 + factor_num]);
         for(int f = 0; f < factor_num; ++f)
         {
-            vi[f] = stod(modelLineSeg[2 + f]);
-            v_ni[f] = stod(modelLineSeg[4 + factor_num + f]);
-            v_zi[f] = stod(modelLineSeg[4 + 2 * factor_num + f]);
+            vi[f] = stod(modelLineSeg[1 + f]);
+            v_ni[f] = stod(modelLineSeg[1 + factor_num + f]);
+            v_zi[f] = stod(modelLineSeg[1 + 2 * factor_num + f]);
         }
     }
 
@@ -66,20 +63,9 @@ public:
      
     friend inline ostream& operator <<(ostream& os, const ftrl_model_unit& mu)
     {
-        os << mu.wi;
         for(int f = 0; f < mu.vi.size(); ++f)
         {
             os << " " << mu.vi[f];
-        }
-        if(abs(mu.w_ni) < 1e-100) {
-            os << " " << 0;
-        } else {
-            os << " " << mu.w_ni;
-        }
-        if(abs(mu.w_zi) < 1e-100) {
-            os << " " << 0;
-        } else {
-            os << " " << mu.w_zi;
         }
         for(int f = 0; f < mu.v_ni.size(); ++f)
         {
@@ -99,7 +85,6 @@ public:
         }
         return os;
     }
-   
 };
 
 
@@ -111,6 +96,7 @@ public:
     unordered_map<string, ftrl_model_unit*> muMap;
 
     int factor_num;
+    int field_num;
     double init_stdev;
     double init_mean;
 
@@ -120,8 +106,8 @@ public:
     ftrl_model_unit* getOrInitModelUnit(string index);
     ftrl_model_unit* getOrInitModelUnitBias();
 
-    double predict(const vector<pair<string, double> >& x, double bias, map<string,ftrl_model_unit*>& theta, vector<double>& sum);
-    double getScore(const vector<pair<string, double> >& x, double bias, unordered_map<string, ftrl_model_unit*>& theta);
+    double predict(const vector<Node>& x, unordered_map<string, ftrl_model_unit*>& theta);
+    double getScore(const vector<Node>& x, unordered_map<string, ftrl_model_unit*>& theta);
     void outputModel(ofstream& out);
     bool loadModel(ifstream& in);
     void debugPrintModel();
@@ -181,52 +167,37 @@ ftrl_model_unit* ftrl_model::getOrInitModelUnitBias()
     return muBias;
 }
 
-
-double ftrl_model::predict(const vector<pair<string, double> >& x, double bias, map<string, ftrl_model_unit*>& theta, vector<double>& sum)
+double ftrl_model::predict(const vector<Node >& x, unordered_map<string, ftrl_model_unit*>& theta)
 {
     double result = 0;
-    result += bias;
-    for(int i = 0; i < x.size(); ++i)
-    {
-        result += theta[x[i].first]->wi * x[i].second;
-    }
-    double sum_sqr, d;
-    for(int f = 0; f < factor_num; ++f)
-    {
-        sum[f] = sum_sqr = 0.0;
-        for(int i = 0; i < x.size(); ++i)
-        {
-            d = theta[x[i].first]->vi[f] * x[i].second;
-            sum[f] += d;
-            sum_sqr += d * d;
+    #if defined USEOMP
+    #pragma omp parallel for schedule(static) reduction(+: result)
+    #endif
+    for(int i = 0; i < x.size(); ++i) {
+        for(int j = i + 1; j < x.size(); ++j) {
+            for(int f = 0; f < factor_num; ++f)
+            {
+                result += theta[x[i].feature + "," + x[j].field]->vi[f] * x[i].value * theta[x[j].feature + "," + x[i].field]->vi[f] * x[j].value;
+            }
         }
-        result += 0.5 * (sum[f] * sum[f] - sum_sqr);
     }
     return result;
 }
 
-
-double ftrl_model::getScore(const vector<pair<string, double> >& x, double bias, unordered_map<string, ftrl_model_unit*>& theta)
+double ftrl_model::getScore(const vector<Node >& x, unordered_map<string, ftrl_model_unit*>& theta)
 {
     double result = 0;
-    result += bias;
-    for(int i = 0; i < x.size(); ++i)
-    {
-        result += get_wi(theta, x[i].first) * x[i].second;
-    }
-    double sum, sum_sqr, d;
-    for(int f = 0; f < factor_num; ++f)
-    {
-        sum = sum_sqr = 0.0;
-        for(int i = 0; i < x.size(); ++i)
-        {
-            d = get_vif(theta, x[i].first, f) * x[i].second;
-            sum += d;
-            sum_sqr += d * d;
+    #if defined USEOMP
+    #pragma omp parallel for schedule(static) reduction(+: result)
+    #endif
+    for(int i = 0; i < x.size(); ++i) {
+        for(int j = i + 1; j < x.size(); ++j) {
+            for(int f = 0; f < factor_num; ++f)
+            {
+                result += get_vif(theta, x[i].feature + "," + x[j].field, f) * x[i].value * get_vif(theta, x[j].feature + "," + x[i].field, f) * x[j].value;
+            }
         }
-        result += 0.5 * (sum * sum - sum_sqr);
     }
-    //return 1.0/(1.0 + exp(-result));
     return result;
 }
 
@@ -261,10 +232,9 @@ double ftrl_model::get_vif(unordered_map<string, ftrl_model_unit*>& theta, const
 
 void ftrl_model::outputModel(ofstream& out)
 {
-    out << "bias " << *muBias << endl;
     for(unordered_map<string, ftrl_model_unit*>::iterator iter = muMap.begin(); iter != muMap.end(); ++iter)
     {
-        out << iter->first << " " << *(iter->second) << endl;
+        out << iter->first << *(iter->second) << endl;
     }
 }
 
@@ -282,22 +252,12 @@ void ftrl_model::debugPrintModel()
 bool ftrl_model::loadModel(ifstream& in)
 {
     string line;
-    if(!getline(in, line))
-    {
-        return false;
-    }
     vector<string> strVec;
-    utils::splitString(line, ' ', &strVec);
-    if(strVec.size() != 4)
-    {
-        return false;
-    }
-    muBias = new ftrl_model_unit(0, strVec);
     while(getline(in, line))
     {
         strVec.clear();
         utils::splitString(line, ' ', &strVec);
-        if(strVec.size() != 3 * factor_num + 4)
+        if(strVec.size() != 3 * factor_num + 1) 
         {
             return false;
         }

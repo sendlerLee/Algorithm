@@ -71,11 +71,16 @@ int main(int argc, char* argv[])
         f_temp.close();
     }
 
+
+    #if defined USEOMP
+    omp_set_num_threads(10);
+    #endif
     pc_frame frame;
-    frame.init(trainer, opt.threads_num,10,10000);
+    frame.init(trainer, opt.threads_num,10,10);
     frame.run();
 
     ofstream f_model(opt.model_path.c_str(), ofstream::out);
+    cout << "output model ..." << opt.model_path << endl;
     trainer.outputModel(f_model);
     f_model.close();
 

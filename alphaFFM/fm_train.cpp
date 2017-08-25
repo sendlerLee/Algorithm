@@ -3,6 +3,9 @@
 #include <fstream>
 #include "src/Frame/pc_frame.h"
 #include "src/FTRL/ftrl_trainer.h"
+#if defined USEOMP
+#include <omp.h>
+#endif
 
 using namespace std;
 
@@ -71,8 +74,12 @@ int main(int argc, char* argv[])
         f_temp.close();
     }
 
+    #if defined USEOMP
+        omp_set_num_threads(opt.factor_num);
+    #endif
+
     pc_frame frame;
-    frame.init(trainer, opt.threads_num,10,10000);
+    frame.init(trainer, opt.threads_num,1,1000);
     frame.run();
 
     ofstream f_model(opt.model_path.c_str(), ofstream::out);

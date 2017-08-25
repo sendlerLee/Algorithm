@@ -6,18 +6,20 @@
 #include "ftrl_model.h"
 #include "../Sample/fm_sample.h"
 #include "../Utils/utils.h"
-
+#if defined USEOMP
+#include <omp.h>
+#endif
 
 struct trainer_option
 {
-    trainer_option() : k0(true), k1(true), factor_num(8), init_mean(0.0), init_stdev(0.1), w_alpha(0.01), w_beta(1.0), w_l1(0.1), w_l2(5.0),
-               v_alpha(0.01), v_beta(1.0), v_l1(0.1), v_l2(5.0), 
+    trainer_option() : k0(true), k1(true), factor_num(8), init_mean(0.0), init_stdev(0.1), w_alpha(0.01), w_beta(0.01), w_l1(0.1), w_l2(0.04),
+               v_alpha(0.01), v_beta(0.01), v_l1(0.1), v_l2(0.04), field_num(1),
                threads_num(1), b_init(false), force_v_sparse(false) {}
     string model_path, init_m_path;
     double init_mean, init_stdev;
     double w_alpha, w_beta, w_l1, w_l2;
     double v_alpha, v_beta, v_l1, v_l2;
-    int threads_num, factor_num;
+    int threads_num, factor_num, field_num;
     bool k0, k1, b_init, force_v_sparse;
     
     void parse_option(const vector<string>& args) 
@@ -119,6 +121,12 @@ struct trainer_option
                 int fvs = stoi(args[++i]);
                 force_v_sparse = (1 == fvs) ? true : false;
             }
+            else if(args[i].compare("-f") == 0)
+            {
+                if(i == argc - 1)
+                    throw invalid_argument("invalid command\n");
+                field_num = stoi(args[++i]); 
+            }   
             else
             {
                 throw invalid_argument("invalid command\n");
@@ -221,21 +229,21 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
 {
     vector<pair<int,double> > estimateY(samples.size());
     map<int,vector<double> > factorSum;
+    unordered_map<string,ftrl_model_unit*> theta;
     for(int k = 0; k < samples.size(); k++) {
-        const vector<pair<string, double> >& x = samples[k].x;
-        ftrl_model_unit* thetaBias = pModel->getOrInitModelUnitBias();
-        map<string,ftrl_model_unit*> theta;
+        const vector<Node >& x = samples[k].x;
         int xLen = x.size();
         for(int i = 0; i < xLen; ++i)
         {
-            const string& index = x[i].first;
-            theta.insert(make_pair(index, pModel->getOrInitModelUnit(index)));
+            for(int j = i + 1; j < xLen; ++j) {
+                const string& index1 = x[i].feature + "," + x[j].field;
+                const string& index2 = x[j].feature + "," + x[i].field;
+                theta.insert(make_pair(index1, pModel->getOrInitModelUnit(index1)));
+                theta.insert(make_pair(index2, pModel->getOrInitModelUnit(index2)));
+            }
         }
-        vector<double> sum(pModel->factor_num);
-        double bias = thetaBias->wi;
-        double p = pModel->predict(x, bias, theta, sum);
+        double p = pModel->predict(x,theta);
         estimateY[k] = make_pair(k,p);
-        factorSum[k] = sum;
     }
 
     sort(estimateY.begin(), estimateY.end(), mysortfunc);
@@ -246,10 +254,12 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
         int indexM = estimateY[m].first;
         double wxM = estimateY[m].second;
         int yM = samples[indexM].y;
-        vector<pair<string, double> > featureM = samples[indexM].x;
-        map<string,pair<double,double> > temps;
+        vector<Node> featureM = samples[indexM].x;
+        unordered_map<string,double> tempFeatures;
         for(int i = 0; i < featureM.size(); i++) {
-            temps.insert(make_pair(featureM[i].first,make_pair(featureM[i].second,0.0)));
+            for(int j = i + 1; j < featureM.size(); j++) {
+                tempFeatures.insert(make_pair(featureM[i].feature + "," + featureM[j].field + ";" + featureM[j].feature + "," + featureM[i].field,featureM[i].value * featureM[j].value));
+            }   
         }
 
         for(int n = m + 1; n < estimateY.size(); n++) {
@@ -258,93 +268,75 @@ void ftrl_trainer::train(const vector<fm_sample>& samples)
             int yN = samples[indexN].y;
             if(yM == yN) continue;
             
-            map<string,pair<double,double> > features(temps);
-            vector<pair<string, double> > featureN = samples[indexN].x;
+            unordered_map<string,double> features(tempFeatures);
+            vector<Node> featureN = samples[indexN].x;
+            
             for(int i = 0; i < featureN.size(); i++) {
-                string index = featureN[i].first;
-                double value = featureN[i].second;
-                if(features.count(index) > 0) {
-                    features[index] = make_pair(features[index].first,value);    
-                }else{
-                    features.insert(make_pair(index,make_pair(0.0,value)));
+                for(int j = i + 1; j < featureN.size(); j++) {
+                    string index = featureN[i].feature + "," + featureN[j].field + ";" + featureN[j].feature + "," + featureN[i].field;
+                    double value = featureN[i].value * featureN[j].value;
+                    auto it = features.find(index);
+                    if(it != features.end()) {
+                        it->second = it->second - value;    
+                    } else {
+                        features.insert(make_pair(index, -1 * value));
+                    }
                 }
             }
-            features.insert(make_pair("bias",make_pair(1.0,1.0)));
             int sign = yM > yN ? 1 : -1;
             double delta_NDCG = sign * abs(weights[m][n]);
             double lambda = -1.0 / (1 + exp(sign * (wxM - wxN))) * delta_NDCG;
  
-            //update w_n, w_z
-            for(map<string,pair<double,double> >::iterator iter = features.begin(); iter != features.end(); ++iter)
+            //update v_n, v_z
+            for(unordered_map<string,double>::iterator iter = features.begin(); iter != features.end(); ++iter)
             {
                 string index = iter -> first;
-                pair<double, double> value = iter -> second;
-                ftrl_model_unit& mu = (index != "bias") ? *(pModel->getOrInitModelUnit(index)) : *(pModel->getOrInitModelUnitBias());
-                double xi = (index != "bias") ? (value.first - value.second) : 1.0;
-                if((index != "bias" && k1) || (index == "bias" && k0))
+                double value = iter -> second;
+                int iPos = index.find_first_of(";",0);
+                string key1 = index.substr(0,iPos);
+                string key2 = index.substr(iPos + 1,index.size() - iPos);
+                ftrl_model_unit& mu1 = *(theta[key1]);
+                ftrl_model_unit& mu2 = *(theta[key2]);
+                for(int f = 0; f < pModel->factor_num; ++f)
                 {
-                    mu.mtx.lock();
-                    double w_gi = lambda * xi;
-                    double w_si = 1 / w_alpha * (sqrt(mu.w_ni + w_gi * w_gi) - sqrt(mu.w_ni));
-                    mu.w_zi += w_gi - w_si * mu.wi;
-                    mu.w_ni += w_gi * w_gi;
-                    if(fabs(mu.w_zi) <= w_l1)
+                    mu1.mtx.lock();
+                    double& vif1 = mu1.vi[f];
+                    double& v_nif1 = mu1.v_ni[f];
+                    double& v_zif1 = mu1.v_zi[f];
+                    double v_gif1 = v_l2 * vif1 + lambda * mu2.vi[f] * value;
+                    double v_sif1 = 1 / v_alpha * (sqrt(v_nif1 + v_gif1 * v_gif1) - sqrt(v_nif1));
+                    v_zif1 += v_gif1 - v_sif1 * vif1;
+                    v_nif1 += v_gif1 * v_gif1;
+                    if(fabs(v_zif1) <= v_l1)
                     {
-                        mu.wi = 0.0;
+                        vif1 = 0.0;
                     }
                     else
                     {
-                        if(force_v_sparse && mu.w_ni > 0 && 0.0 == mu.wi)
-                        {
-                            mu.reinit_vi(pModel->init_mean, pModel->init_stdev);
-                        }
-                        mu.wi = (-1) *
-                            (1 / (w_l2 + (w_beta + sqrt(mu.w_ni)) / w_alpha)) *
-                            (mu.w_zi - utils::sgn(mu.w_zi) * w_l1);
+                        vif1 = (-1) *
+                            (1 / (v_l2 + (v_beta + sqrt(v_nif1)) / v_alpha)) *
+                            (v_zif1 - utils::sgn(v_zif1) * v_l1);
                     }
-                    mu.mtx.unlock();
-                }
-            }
-            //update v_n, v_z
-            for(map<string,pair<double,double> >::iterator iter = features.begin(); iter != features.end(); ++iter)
-            {
-                string index = iter -> first;
-                if(index == "bias") continue;
-                pair<double, double> value = iter -> second;
-                ftrl_model_unit& mu = *(pModel->getOrInitModelUnit(index));
-                for(int f = 0; f < pModel->factor_num; ++f)
-                {
-                    mu.mtx.lock();
-                    double& vif = mu.vi[f];
-                    double& v_nif = mu.v_ni[f];
-                    double& v_zif = mu.v_zi[f];
-                    double v_gif = lambda * ((factorSum[indexM][f] * value.first - vif * value.first * value.first) - (factorSum[indexN][f] * value.second - vif * value.second * value.second));
-                    double v_sif = 1 / v_alpha * (sqrt(v_nif + v_gif * v_gif) - sqrt(v_nif));
-                    v_zif += v_gif - v_sif * vif;
-                    v_nif += v_gif * v_gif;
-                    //有的特征在整个训练集中只出现一次，这里还需要对vif做一次处理
-                    if(force_v_sparse && v_nif > 0.0 && 0.0 == mu.wi)
+                    mu1.mtx.unlock();
+                    mu2.mtx.lock();
+                    double& vif2 = mu2.vi[f];
+                    double& v_nif2 = mu2.v_ni[f];
+                    double& v_zif2 = mu2.v_zi[f];
+                    double v_gif2 = v_l2 * vif2 + lambda * mu1.vi[f] * value;
+                    double v_sif2 = 1 / v_alpha * (sqrt(v_nif2 + v_gif2 * v_gif2) - sqrt(v_nif2));
+                    v_zif2 += v_gif2 - v_sif2 * vif2;
+                    v_nif2 += v_gif2 * v_gif2;
+                    if(fabs(v_zif2) <= v_l1)
                     {
-                        vif = 0.0;
+                        vif2 = 0.0;
                     }
-                    if(v_nif > 0.0)
+                    else
                     {
-                        if(force_v_sparse && 0.0 == mu.wi)
-                        {
-                            vif = 0.0;
-                        }
-                        else if(fabs(v_zif) <= v_l1)
-                        {
-                            vif = 0.0;
-                        }
-                        else
-                        {
-                            vif = (-1) *
-                                (1 / (v_l2 + (v_beta + sqrt(v_nif)) / v_alpha)) *
-                                (v_zif - utils::sgn(v_zif) * v_l1);
-                        }
+                        vif2 = (-1) *
+                            (1 / (v_l2 + (v_beta + sqrt(v_nif2)) / v_alpha)) *
+                            (v_zif2 - utils::sgn(v_zif2) * v_l1);
                     }
-                    mu.mtx.unlock();
+                    mu2.mtx.unlock();
                 }
             }
         }
