@@ -12,6 +12,7 @@ public:
     void static splitString(string& line, char delimiter, vector<string>* r);
     int static sgn(double x);
     double static uniform();
+    double static uniform(double min, double max);
     double static gaussian();
     double static gaussian(double mean, double stdev);
 };

@@ -201,8 +201,9 @@ void ftrl_trainer::train(int y, const vector<Node>& x)
             theta.insert(make_pair(index2, pModel->getOrInitModelUnit(index2)));
         }
     }
-    double p = pModel->getScore(x, theta);
+    double p = pModel->predict(x, theta);
     double mult = y * (1 / (1 + exp(-p * y)) - 1);
+    //cout << p << " " << mult << endl;
     //update w_n, w_z
     for(int i = 0; i < xLen; ++i)
     {
@@ -223,7 +224,6 @@ void ftrl_trainer::train(int y, const vector<Node>& x)
                 double v_sif1 = 1 / v_alpha * (sqrt(v_nif1 + v_gif1 * v_gif1) - sqrt(v_nif1));
                 v_zif1 += v_gif1 - v_sif1 * vif1;
                 v_nif1 += v_gif1 * v_gif1;
-
                 if(fabs(v_zif1) <= v_l1)
                 {
                     vif1 = 0.0;

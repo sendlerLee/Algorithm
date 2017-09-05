@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
     ftrl_predictor predictor(opt.dim, f_model, f_predict);
 
     pc_frame frame;
-    frame.init(predictor, opt.threads_num,10,10000);
+    frame.init(predictor, opt.threads_num,10,100);
     frame.run();
 
     f_model.close();

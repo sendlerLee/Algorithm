@@ -1,5 +1,6 @@
 #include <cmath>
 #include <stdlib.h>
+#include <random>
 #include "utils.h"
 
 const double kPrecision = 0.0000000001;
@@ -33,7 +34,12 @@ double utils::uniform()
     return rand()/((double)RAND_MAX + 1.0);
 }
 
-
+double utils::uniform(double min, double max) 
+{
+    default_random_engine generator(time(NULL));
+    uniform_real_distribution<double> distribution(min, max);
+    return distribution(generator);
+}
 double utils::gaussian() 
 {
     double u,v, x, y, Q;

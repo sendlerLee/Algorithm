@@ -33,8 +33,10 @@ public:
         vi.resize(factor_num);
         v_ni.resize(factor_num);
         v_zi.resize(factor_num);
+        //double coef = 1.0f/sqrt(factor_num);
         for(int f = 0; f < factor_num; ++f)
         {
+            //vi[f] = coef * utils::uniform();
             vi[f] = utils::gaussian(v_mean, v_stdev);
             v_ni[f] = 0.0;
             v_zi[f] = 0.0;
@@ -57,8 +59,10 @@ public:
     void reinit_vi(double v_mean, double v_stdev)
     {
         int size = vi.size();
+        //double coef = 1.0f/sqrt(size);
         for(int f = 0; f < size; ++f)
         {
+            //vi[f] = coef * utils::uniform();
             vi[f] = utils::gaussian(v_mean, v_stdev);
         }
     }
@@ -99,6 +103,7 @@ public:
     ftrl_model_unit* getOrInitModelUnit(string index);
     ftrl_model_unit* getOrInitModelUnitBias();
 
+    double predict(const vector<Node>& x, unordered_map<string, ftrl_model_unit*>& theta);
     double getScore(const vector<Node>& x, unordered_map<string, ftrl_model_unit*>& theta);
     void outputModel(ofstream& out);
     bool loadModel(ifstream& in);
@@ -160,6 +165,27 @@ ftrl_model_unit* ftrl_model::getOrInitModelUnitBias()
 }
 
 
+double ftrl_model::predict(const vector<Node>& x, unordered_map<string, ftrl_model_unit*>& theta)
+{
+    double result = 0;
+    #if defined USEOMP
+        #pragma omp parallel for schedule(static) reduction(+: result)
+    #endif
+    for(int i = 0; i < x.size(); ++i)
+    {
+        for(int j = i + 1; j < x.size(); ++j)
+        {
+            for(int f = 0; f < factor_num; ++f)
+            {
+                result += theta[x[i].feature + "," + x[j].field]->vi[f] * x[i].value * theta[x[j].feature + "," + x[i].field]->vi[f] * x[j].value;
+            }
+        }
+    }
+    //return 1.0/(1.0 + exp(-result));
+    return result;
+}
+
+
 double ftrl_model::getScore(const vector<Node>& x, unordered_map<string, ftrl_model_unit*>& theta)
 {
     double result = 0;
@@ -177,6 +203,7 @@ double ftrl_model::getScore(const vector<Node>& x, unordered_map<string, ftrl_mo
         }
     }
     return 1.0/(1.0 + exp(-result));
+    //return result;
 }
 
 
@@ -219,10 +246,9 @@ void ftrl_model::outputModel(ofstream& out)
 
 void ftrl_model::debugPrintModel()
 {
-    cout << "bias " << *muBias << endl;
     for(unordered_map<string, ftrl_model_unit*>::iterator iter = muMap.begin(); iter != muMap.end(); ++iter)
     {
-        cout << iter->first << " " << *(iter->second) << endl;
+        cout << iter->first << *(iter->second) << endl;
     }
 }
 
