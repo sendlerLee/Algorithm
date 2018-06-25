@@ -176,14 +176,14 @@ bool mysortfunc(const pair<string, double>& a, const pair<string, double>& b)
 
 void writeWeightFile(Problem& Tr)
 {
-        ofstream outfile(opt.Va_out_path);
+    ofstream outfile(opt.Va_out_path);
 	outfile << "F0 " << Tr.F0 << endl;
 	outfile << "CVR " << Tr.CVR << endl;
 	for (int f = 0; f < Tr.nr_field; f += 1)
 	{
 		string fname = Tr.id2featmap[f];
 		outfile << fname << " " << Tr.W[f] << endl;
-        }
+    }
 	outfile.close();
 }
 
@@ -211,8 +211,8 @@ double calAUC(Problem& prob)
 	int startpoint = 1000, predictposcnt = 0, belownegcnt = negcnt;
 	for (size_t i = 0; i < userid2score.size(); ++i) 
 	{
-        	string username = userid2score[i].first;
-                double fscore = userid2score[i].second;
+        string username = userid2score[i].first;
+        double fscore = userid2score[i].second;
 		int yi = userid2label[username];
 		//cout << i << "\t" << yi << "\t" << fscore << endl;
 
@@ -246,23 +246,23 @@ void loadTrainInstance(Problem& Tr, ifstream& inputfile)
     string line;
     while(getline(inputfile, line)) {
         istringstream iss(line);
-	string userid;
+        string userid;
         int target;
         iss >> userid >> target;
-	if (target != 1) target = 0;
+        if (target != 1) target = 0;
 
-	Tr.Y.push_back(target);
-	Tr.X.push_back(std::map<int, double>());
+        Tr.Y.push_back(target);
+        Tr.X.push_back(std::map<int, double>());
 
-	int i = Tr.X.size() - 1;
-	Tr.instidmap[i] = userid;
+        int i = Tr.X.size() - 1;
+        Tr.instidmap[i] = userid;
 
         string feature;
         while (iss) {
-                iss >> feature;
-                int findex = feature.find_last_of(":");
-                string feat = feature.substr(0, findex).c_str();
-                double x = atof(feature.substr(findex + 1, feature.size() - findex).c_str());
+            iss >> feature;
+            int findex = feature.find_last_of(":");
+            string feat = feature.substr(0, findex).c_str();
+            double x = atof(feature.substr(findex + 1, feature.size() - findex).c_str());
 
 		int f = -1;
 		if (Tr.feat2idmap.count(feat) == 0) {
@@ -285,34 +285,34 @@ void loadTestInstance(Problem& Tr, Problem& Va, ifstream& inputfile)
     string line;
     while(getline(inputfile, line)) {
         istringstream iss(line);
-	string userid;
+        string userid;
         int target;
         iss >> userid >> target;
-	if (target != 1) target = 0;
+        if (target != 1) target = 0;
 
-	map<int, double> feat2val;
+        map<int, double> feat2val;
         string feature;
         while (iss) {
-                iss >> feature;
-                int findex = feature.find_last_of(":");
-                string feat = feature.substr(0, findex).c_str();
-                double x = atof(feature.substr(findex + 1, feature.size() - findex).c_str());
+            iss >> feature;
+            int findex = feature.find_last_of(":");
+            string feat = feature.substr(0, findex).c_str();
+            double x = atof(feature.substr(findex + 1, feature.size() - findex).c_str());
 
-		if (Tr.feat2idmap.count(feat) == 0) continue;
-		int j = Tr.feat2idmap[feat];
-		feat2val[j] = x;
+            if (Tr.feat2idmap.count(feat) == 0) continue;
+            int j = Tr.feat2idmap[feat];
+            feat2val[j] = x;
         }
-	
-	//if (feat2val.size() >= 2) {
-	if (feat2val.size() >= 1) {
-		Va.Y.push_back(target);
+        
+        //if (feat2val.size() >= 2) {
+        if (feat2val.size() >= 1) {
+            Va.Y.push_back(target);
 
-		int i = Va.X.size();
-		Va.instidmap[i] = userid;
-		
-		Va.X.push_back(std::map<int, double>());
-		Va.X[i] = feat2val;
-	}
+            int i = Va.X.size();
+            Va.instidmap[i] = userid;
+            
+            Va.X.push_back(std::map<int, double>());
+            Va.X[i] = feat2val;
+        }
     }
     Va.nr_instance = Va.X.size();
 }
@@ -404,9 +404,9 @@ int main(int const argc, char const * const * const argv)
 	double testmse = 0.0;
 	double testllh = 0.0;
 	#pragma omp parallel for schedule(static) reduction(+: testmse, testllh)
-        for (int i = 0; i < Va.nr_instance; i += 1) 
+    for (int i = 0; i < Va.nr_instance; i += 1) 
 	{
-            	int yi = Va.Y[i];
+       	int yi = Va.Y[i];
 		double pi = 1.0 / (1 + exp(-Va.F[i]));
 
 		double ctr = 1.0 / (1 + exp(-Va.F[i]));
@@ -440,8 +440,8 @@ int main(int const argc, char const * const * const argv)
 				pair<int, double>& ins = Tr.Xhat[f][j];
 				int i = ins.first;
 				double x = ins.second;
-                                numeratorvec[f] += Tr.Z[i] * x;
-                                denominatorvec[f] += Tr.Q[i] * x * x;
+                numeratorvec[f] += Tr.Z[i] * x;
+                denominatorvec[f] += Tr.Q[i] * x * x;
 			}
 		}
 
@@ -449,7 +449,7 @@ int main(int const argc, char const * const * const argv)
         	#pragma omp parallel for schedule(static) reduction(+: trimcnt)
 		for (int i = 0;i < Tr.W.size(); i += 1)
 		{
-                        Tr.W[i] += opt.nr_lr * numeratorvec[i] / (denominatorvec[i] + opt.nr_reg);
+            Tr.W[i] += opt.nr_lr * numeratorvec[i] / (denominatorvec[i] + opt.nr_reg);
 			if (fabs(Tr.W[i]) < opt.feat_threshold) 
 			{
 				Tr.W[i] = 0;
@@ -461,9 +461,9 @@ int main(int const argc, char const * const * const argv)
 		double trainllh = 0.0;
 		double trainauc = 0.0;
 		#pragma omp parallel for schedule(static) reduction(+: trainmse, trainllh)
-        	for (int i = 0; i < Tr.nr_instance; i += 1) 
+        for (int i = 0; i < Tr.nr_instance; i += 1) 
 		{
-            		int yi = Tr.Y[i];
+        	int yi = Tr.Y[i];
 			double Fi = 0.0;
 
 			for (map<int, double>::iterator it = Tr.X[i].begin(); it != Tr.X[i].end(); ++it) 
@@ -490,9 +490,9 @@ int main(int const argc, char const * const * const argv)
 		double testllh = 0.0;
 		double testauc = 0.0;
 		#pragma omp parallel for schedule(static) reduction(+: testmse, testllh)
-        	for (int i = 0; i < Va.nr_instance; i += 1) 
+        for (int i = 0; i < Va.nr_instance; i += 1) 
 		{
-            		int yi = Va.Y[i];
+        	int yi = Va.Y[i];
 
 			double Fi = 0.0;
 			for (map<int, double>::iterator it = Va.X[i].begin(); it != Va.X[i].end(); ++it) 
@@ -521,5 +521,5 @@ int main(int const argc, char const * const * const argv)
 	}
 
 	writeWeightFile(Tr);
-return 0;
+    return 0;
 }

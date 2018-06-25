@@ -2,7 +2,7 @@
 #include <cstring>
 #include <cassert>
 #include <algorithm>
-#include <omp.h>
+//#include <omp.h>
 #include <iostream>
 #include <vector>
 #include <map>
@@ -22,13 +22,13 @@ void read_train_data(Problem& TrProb, std::string const &path)
 	while(getline(inputfile, line)) {
 		std::istringstream iss(line);
 		std::string instance;
-		double gap, w, y;
-		iss >> instance >> gap;
+		double w,y;
+		iss >> instance >> y;
 
-		TrProb.Gap.push_back(gap);
-		gap = gap + TrProb.gama;
-		y = gap;
-		y = log(gap + 1.0);
+		//TrProb.Gap.push_back(gap);
+		//gap = gap + TrProb.gama;
+		//y = gap;
+		y = log(y + 1.0);
 		w = 1.0;
 
 		/*
@@ -97,13 +97,13 @@ void read_test_data(Problem& TrProb, Problem& VaProb, std::string const &path)
 	while(getline(inputfile, line)) {
 		std::istringstream iss(line);
 		std::string instance;
-		double gap, y;
-		iss >> instance >> gap;
-		VaProb.Gap.push_back(gap);
+		double y;
+		iss >> instance >> y;
+		//VaProb.Gap.push_back(gap);
 
-		gap = gap + TrProb.gama;
-		y = gap;
-		y = log(gap + 1.0);
+		//gap = gap + TrProb.gama;
+		//y = gap;
+		y = log(y + 1.0);
 		VaProb.Y.push_back(y);
 		
 		uint32_t instid = static_cast<uint32_t>(VaProb.instidmap.size());

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <omp.h>
+//#include <omp.h>
 #include <algorithm>
 
 #include "common.h"
@@ -129,7 +129,7 @@ int main(int const argc, char const * const * const argv)
     std::cout << "Test nr_instance: " << Va.nr_instance << " nr_field: " << Va.nr_field << " nr_minnodecnt: " << Va.minNodeCount << std::endl;
     std::cout << "done\n" << std::flush;
 
-    omp_set_num_threads(20);
+    //omp_set_num_threads(20);
 
     GBDT gbdt(opt.nr_tree, opt.nr_depth);
     gbdt.learningrate = opt.learningrate;

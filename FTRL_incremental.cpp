@@ -180,7 +180,7 @@ Option parse_option(std::vector<std::string> const &args)
 
 void writeWeightFile(Problem& Tr)
 {
-        ofstream outfile(opt.Va_out_path);
+    ofstream outfile(opt.Va_out_path);
 	ofstream statefile(opt.state_path);
 	for (map<string, int>::iterator it = Tr.feat2idmap.begin(); it != Tr.feat2idmap.end(); ++it)
 	{
@@ -189,7 +189,7 @@ void writeWeightFile(Problem& Tr)
 		if (Tr.W[j] != 0) outfile << feat << " " << Tr.W[j] << endl;
 		statefile << "state_Z_" + feat << " " << Tr.Z[j] << endl;
 		statefile << "state_N_" + feat << " " << Tr.N[j] << endl;
-        }
+    }
 	outfile.close();
 	statefile.close();
 }
@@ -220,8 +220,8 @@ double calAUC(Problem& prob)
 	int predictposcnt = 0, belownegcnt = negcnt;
 	for (size_t i = 0; i < userid2score.size(); ++i) 
 	{
-        	int idx = userid2score[i].first;
-                double fscore = userid2score[i].second;
+        int idx = userid2score[i].first;
+        double fscore = userid2score[i].second;
 		int yi = userid2label[idx];
 
 		if (yi == 1) 
@@ -243,39 +243,39 @@ void loadTrainInstance(Problem& Tr, ifstream& inputfile)
     string line;
     while(getline(inputfile, line)) {
         istringstream iss(line);
-	string userid;
+        string userid;
         int target;
         iss >> userid >> target;
-	if (target != 1) target = 0;
+        if (target != 1) target = 0;
 
-	Tr.Y.push_back(target);
-	Tr.X.push_back(std::map<int, double>());
+        Tr.Y.push_back(target);
+        Tr.X.push_back(std::map<int, double>());
 
-	int i = Tr.X.size() - 1;
+        int i = Tr.X.size() - 1;
         string feature;
         while (iss) {
-                iss >> feature;
-                int findex = feature.find_last_of(":");
-                string feat = feature.substr(0, findex).c_str();
-                double x = atof(feature.substr(findex + 1, feature.size() - findex).c_str());
+            iss >> feature;
+            int findex = feature.find_last_of(":");
+            string feat = feature.substr(0, findex).c_str();
+            double x = atof(feature.substr(findex + 1, feature.size() - findex).c_str());
 
-		int f = -1;
-		if (Tr.feat2idmap.count(feat) == 0) {
-			// new feature
-			int f = Tr.feat2idmap.size();
-			Tr.feat2idmap[feat] = f;
-		}
-		f = Tr.feat2idmap[feat];
-		if (Tr.X[i].count(f) != 0) continue;
-		Tr.X[i][f] = x;
+            int f = -1;
+            if (Tr.feat2idmap.count(feat) == 0) {
+                // new feature
+                int f = Tr.feat2idmap.size();
+                Tr.feat2idmap[feat] = f;
+            }
+            f = Tr.feat2idmap[feat];
+            if (Tr.X[i].count(f) != 0) continue;
+            Tr.X[i][f] = x;
         }
-	string feat = "F0";
-	if (Tr.feat2idmap.count(feat) == 0) {
-        	int f = Tr.feat2idmap.size();
-		Tr.feat2idmap[feat] = f;
-	}
-	int f = Tr.feat2idmap[feat];
-	Tr.X[i][f] = 1;
+        string feat = "F0";
+        if (Tr.feat2idmap.count(feat) == 0) {
+            int f = Tr.feat2idmap.size();
+            Tr.feat2idmap[feat] = f;
+        }
+        int f = Tr.feat2idmap[feat];
+        Tr.X[i][f] = 1;
     }
     Tr.nr_instance = Tr.X.size();
 }
@@ -285,40 +285,40 @@ void loadTestInstance(Problem& Tr, Problem& Va, ifstream& inputfile)
     string line;
     while(getline(inputfile, line)) {
         istringstream iss(line);
-	string userid;
+	    string userid;
         int target;
         iss >> userid >> target;
-	if (target != 1) target = 0;
+        if (target != 1) target = 0;
 
-	map<int, double> feat2val;
+        map<int, double> feat2val;
         string feature;
         while (iss) {
-                iss >> feature;
-                int findex = feature.find_last_of(":");
-                string feat = feature.substr(0, findex).c_str();
-                double x = atof(feature.substr(findex + 1, feature.size() - findex).c_str());
+            iss >> feature;
+            int findex = feature.find_last_of(":");
+            string feat = feature.substr(0, findex).c_str();
+            double x = atof(feature.substr(findex + 1, feature.size() - findex).c_str());
 
-		if (Tr.feat2idmap.count(feat) == 0) {
-			//continue;
-			int f = Tr.feat2idmap.size();
-			Tr.feat2idmap[feat] = f;
-		}
-		int j = Tr.feat2idmap[feat];
-		feat2val[j] = x;
+            if (Tr.feat2idmap.count(feat) == 0) {
+                //continue;
+                int f = Tr.feat2idmap.size();
+                Tr.feat2idmap[feat] = f;
+            }
+            int j = Tr.feat2idmap[feat];
+            feat2val[j] = x;
         }
-	string feat = "F0";
-	if (Tr.feat2idmap.count(feat) != 0)
-	{
-		int j = Tr.feat2idmap[feat];
-		feat2val[j] = 1;
-	}
-	if (feat2val.size() >= 1) {
-		Va.Y.push_back(target);
-		int i = Va.X.size();
-		
-		Va.X.push_back(std::map<int, double>());
-		Va.X[i] = feat2val;
-	}
+        string feat = "F0";
+        if (Tr.feat2idmap.count(feat) != 0)
+        {
+            int j = Tr.feat2idmap[feat];
+            feat2val[j] = 1;
+        }
+        if (feat2val.size() >= 1) {
+            Va.Y.push_back(target);
+            int i = Va.X.size();
+            
+            Va.X.push_back(std::map<int, double>());
+            Va.X[i] = feat2val;
+        }
     }
     Va.nr_instance = Va.X.size();
 }
@@ -338,14 +338,14 @@ void loadPreviousFeature(Problem& Tr, Problem& Va, ifstream& inputfile)
             if (Tr.feat2idmap.count(feat) == 0) {
                 int f = Tr.feat2idmap.size();
                 Tr.feat2idmap[feat] = f;
-	    }
+	        }
         }
-	else if (prefix == "state_N_") {
+	    else if (prefix == "state_N_") {
             feat = feat.substr(8);
             if (Tr.feat2idmap.count(feat) == 0) {
                 int f = Tr.feat2idmap.size();
                 Tr.feat2idmap[feat] = f;
-	    }
+	        }
         }
     }
 }
@@ -359,15 +359,15 @@ void loadPreviousState(Problem& Tr, Problem& Va, ifstream& inputfile)
         double weight;
         iss >> feat >> weight;
 	
-	string prefix = feat.substr(0, 8);
-	if (prefix == "state_Z_") {
-	    feat = feat.substr(8);
-	    if (Tr.feat2idmap.count(feat) > 0) {
+        string prefix = feat.substr(0, 8);
+        if (prefix == "state_Z_") {
+            feat = feat.substr(8);
+            if (Tr.feat2idmap.count(feat) > 0) {
                 int f = Tr.feat2idmap[feat];
                 Tr.Z[f] = weight;
     	    }
-  	}else if (prefix == "state_N_") {
-	    feat = feat.substr(8);
+        }else if (prefix == "state_N_") {
+            feat = feat.substr(8);
             if (Tr.feat2idmap.count(feat) > 0) {
                 int f = Tr.feat2idmap[feat];
                 Tr.N[f] = weight;
@@ -376,21 +376,21 @@ void loadPreviousState(Problem& Tr, Problem& Va, ifstream& inputfile)
     }
     for (int f = 0; f < Tr.nr_field; f += 1)
     {
-	if (fabs(Tr.Z[f]) <= opt.r1)
+        if (fabs(Tr.Z[f]) <= opt.r1)
         {
         	Tr.W[f] = 0;
-  	}
-	else
-	{
-		double A = (opt.beta + sqrt(Tr.N[f])) / opt.alpha + opt.r2;
+        }
+        else
+        {
+            double A = (opt.beta + sqrt(Tr.N[f])) / opt.alpha + opt.r2;
         	double B = Tr.Z[f] - opt.r1;
-                if (Tr.Z[f] < 0) {
-                	B = Tr.Z[f] + opt.r1;
+            if (Tr.Z[f] < 0) {
+                B = Tr.Z[f] + opt.r1;
        		}
-		else if (Tr.Z[f] == 0) {
-			B = 0;
-		}
-                Tr.W[f] = -B/A;
+            else if (Tr.Z[f] == 0) {
+                B = 0;
+            }
+            Tr.W[f] = -B/A;
        	}
     }
 }
@@ -426,9 +426,9 @@ int main(int const argc, char const * const * const argv)
 	cout << "Load Data Finish, numTestInstance:" << Va.nr_instance << endl;
 
 	if (opt.previous_state_path != "none"){
-        	ifstream statefile(opt.previous_state_path);
-        	loadPreviousFeature(Tr, Va, statefile);
-        }
+        ifstream statefile(opt.previous_state_path);
+        loadPreviousFeature(Tr, Va, statefile);
+    }
 	Tr.nr_field = Tr.feat2idmap.size();
 
 	Tr.F.resize(Tr.nr_instance, 0);
@@ -439,9 +439,9 @@ int main(int const argc, char const * const * const argv)
 	Tr.N.resize(Tr.nr_field, 0);
 
 	if (opt.previous_state_path != "none"){
-        	ifstream statefile(opt.previous_state_path);
-        	loadPreviousState(Tr, Va, statefile);
-        }
+        ifstream statefile(opt.previous_state_path);
+        loadPreviousState(Tr, Va, statefile);
+    }
 
 	Tr.Xhat.resize(Tr.nr_field, vector<pair<int, double>>());
 	for (int i = 0; i < Tr.nr_instance; i += 1) 
@@ -459,10 +459,10 @@ int main(int const argc, char const * const * const argv)
 	for (int i = 0; i < Tr.nr_instance; i += 1) {
 		double Fi = 0;
 		for (map<int, double>::iterator it = Tr.X[i].begin(); it != Tr.X[i].end(); ++it)
-                {
-                        int f = it->first;
-                        double x = it->second;
-                        if (fabs(Tr.Z[f]) <= opt.r1) 
+        {
+            int f = it->first;
+            double x = it->second;
+            if (fabs(Tr.Z[f]) <= opt.r1) 
 			{
 			    Tr.W[f] = 0;
 			}
@@ -471,71 +471,71 @@ int main(int const argc, char const * const * const argv)
 			    double A = (opt.beta + sqrt(Tr.N[f])) / opt.alpha + opt.r2;
 			    double B = Tr.Z[f] - opt.r1; 
 			    if (Tr.Z[f] < 0) {
-				B = Tr.Z[f] + opt.r1;
+				    B = Tr.Z[f] + opt.r1;
 			    }
 			    else if (Tr.Z[f] == 0) {
-				B = 0;
+				    B = 0;
 			    }
 			    Tr.W[f] = -B/A;
 			}
-			Fi += Tr.W[f] * x; 
-                }
-		Tr.F[i] = Fi;
+            Fi += Tr.W[f] * x; 
+        }
+        Tr.F[i] = Fi;
 		//update state
 		for (map<int, double>::iterator it = Tr.X[i].begin(); it != Tr.X[i].end(); ++it)
 		{
-                        int f = it->first;
-                        double x = it->second;
+            int f = it->first;
+            double x = it->second;
 			double predict = 1.0 / (1 + exp(-Tr.F[i]));
 			double gradient = (predict - Tr.Y[i]) * x;  
 			double sigma = (sqrt(Tr.N[f] + gradient * gradient) - sqrt(Tr.N[f])) / opt.alpha;
 			Tr.Z[f] = Tr.Z[f] + gradient - sigma * Tr.W[f];
 			Tr.N[f] = Tr.N[f] + gradient * gradient;
-                }
+        }
 	}
 
 	for (int i = 0; i < Va.nr_instance; i += 1) {
-        	double Fi = 0.0;
-                for (map<int, double>::iterator it = Va.X[i].begin(); it != Va.X[i].end(); ++it)
+        double Fi = 0.0;
+        for (map<int, double>::iterator it = Va.X[i].begin(); it != Va.X[i].end(); ++it)
+        {
+            int f = it->first;
+            double x = it->second;
+            if (opt.iterative)
+            {
+                if (fabs(Tr.Z[f]) <= opt.r1)
                 {
-                	int f = it->first;
-                        double x = it->second;
-			if (opt.iterative)
-			{
-				if (fabs(Tr.Z[f]) <= opt.r1)
-                        	{
-                            		Tr.W[f] = 0;
-                        	}
-                        	else
-                        	{
-                            		double A = (opt.beta + sqrt(Tr.N[f])) / opt.alpha + opt.r2;
-                            		double B = Tr.Z[f] - opt.r1;
-                            		if (Tr.Z[f] < 0) {
-                                		B = Tr.Z[f] + opt.r1;
-                            		} 
-					else if (Tr.Z[f] == 0) {
-						B = 0;
-					}
-                            		Tr.W[f] = -B/A;
-                        	}
-			}
-                	Fi += Tr.W[f] * x;
-		}
-               	Va.F[i] = Fi;
-		if (opt.iterative)
-		{
-			//update state
-			for (map<int, double>::iterator it = Va.X[i].begin(); it != Va.X[i].end(); ++it)
-                	{
-                        	int f = it->first;
-                        	double x = it->second;
-                        	double predict = 1.0 / (1 + exp(-Va.F[i]));
-                        	double gradient = (predict - Va.Y[i]) * x;
-                        	double sigma = (sqrt(Tr.N[f] + gradient * gradient) - sqrt(Tr.N[f])) / opt.alpha;
-                        	Tr.Z[f] = Tr.Z[f] + gradient - sigma * Tr.W[f];
-                        	Tr.N[f] = Tr.N[f] + gradient * gradient;
-			}
+                    Tr.W[f] = 0;
                 }
+                else
+                {
+                    double A = (opt.beta + sqrt(Tr.N[f])) / opt.alpha + opt.r2;
+                    double B = Tr.Z[f] - opt.r1;
+                    if (Tr.Z[f] < 0) {
+                        B = Tr.Z[f] + opt.r1;
+                    } 
+                    else if (Tr.Z[f] == 0) {
+                        B = 0;
+                    }
+                    Tr.W[f] = -B/A;
+                }
+            }
+            Fi += Tr.W[f] * x;
+        }
+        Va.F[i] = Fi;
+        if (opt.iterative)
+        {
+        //update state
+            for (map<int, double>::iterator it = Va.X[i].begin(); it != Va.X[i].end(); ++it)
+            {
+                int f = it->first;
+                double x = it->second;
+                double predict = 1.0 / (1 + exp(-Va.F[i]));
+                double gradient = (predict - Va.Y[i]) * x;
+                double sigma = (sqrt(Tr.N[f] + gradient * gradient) - sqrt(Tr.N[f])) / opt.alpha;
+                Tr.Z[f] = Tr.Z[f] + gradient - sigma * Tr.W[f];
+                Tr.N[f] = Tr.N[f] + gradient * gradient;
+            }
+        }
 	}
 	double tr_mse = 0;
 	double tr_logloss = 0;
@@ -555,9 +555,9 @@ int main(int const argc, char const * const * const argv)
 	double va_mse = 0.0;
 	double va_logloss = 0.0;
 	#pragma omp parallel for schedule(static) reduction(+: va_mse, va_logloss)
-        for (int i = 0; i < Va.nr_instance; i += 1) 
+    for (int i = 0; i < Va.nr_instance; i += 1) 
 	{
-            	int yi = Va.Y[i];
+      	int yi = Va.Y[i];
 		double pi = 1.0 / (1 + exp(-Va.F[i]));
 
 		va_mse += (yi - pi) * (yi - pi);

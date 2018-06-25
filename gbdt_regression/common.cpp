@@ -2,7 +2,7 @@
 #include <cstring>
 #include <cassert>
 #include <algorithm>
-#include <omp.h>
+//#include <omp.h>
 #include <iostream>
 #include <vector>
 #include <map>

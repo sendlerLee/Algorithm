@@ -5,7 +5,7 @@
 #include <numeric>
 #include <algorithm>
 #include <thread>
-#include <omp.h>
+//#include <omp.h>
 #include <stdlib.h>
 
 #include "gbdt.h"
@@ -24,11 +24,11 @@ double medianw(std::vector<double> const &Y, std::vector<double> const &W)
     double tempsum = 0.0;
     for(int i = 0; i < instscorevec.size(); i += 1)
     {
-	uint32_t idx = instscorevec[i].first;
-	double m = instscorevec[i].second;
-	double w = W[idx];
-	tempsum += w;
-	if (tempsum >= halfsum) return m;
+        uint32_t idx = instscorevec[i].first;
+        double m = instscorevec[i].second;
+        double w = W[idx];
+        tempsum += w;
+        if (tempsum >= halfsum) return m;
     }
 }
  
@@ -75,11 +75,11 @@ void scan(
 	// Instance sort descending order
 	for(uint32_t i = 0; i < instancevec.size(); i += 1)
 	{
-            const std::pair<uint32_t, double> & inst = instancevec[i];
+        const std::pair<uint32_t, double> & inst = instancevec[i];
 	    uint32_t instid = inst.first;
 	    double instval = inst.second;
 
-            Location const &location = instlocations[instid];
+        Location const &location = instlocations[instid];
 	    if(location.ofb == true) continue;
 
             uint32_t tnode_idx = location.tnode_idx;
@@ -92,8 +92,8 @@ void scan(
             {
                 double const sr = meta.s - meta.sl;
                 uint32_t const nr = meta.n - meta.nl;
-		if (nr > minNodeCapacity && meta.nl > minNodeCapacity)
-		{
+                if (nr > minNodeCapacity && meta.nl > minNodeCapacity)
+                {
                 	double const current_ese = (meta.sl*meta.sl)/static_cast<double>(meta.nl) + (sr*sr)/static_cast<double>(nr);
                 	Defender &defender = defenders[f][fid];
                 	double &best_ese = defender.ese;
@@ -102,31 +102,31 @@ void scan(
                     		best_ese = current_ese;
                     		defender.threshold = meta.v;
                 	}
-		}
+                }
             }
 	
             meta.sl += location.r;
             ++meta.nl;
-	    meta.v = instval;
+	        meta.v = instval;
 	
             if(i == instancevec.size() - 1)
             {
                 double const sr = meta.s - meta.sl;
                 uint32_t const nr = meta.n - meta.nl;
-		if (nr > minNodeCapacity && meta.nl > minNodeCapacity)
-		{
+                if (nr > minNodeCapacity && meta.nl > minNodeCapacity)
+                {
                 	double const current_ese = (meta.sl*meta.sl)/static_cast<double>(meta.nl) + (sr*sr)/static_cast<double>(nr);
                 	Defender &defender = defenders[f][fid];
                 	double &best_ese = defender.ese;
                 	if(current_ese > best_ese)
                 	{
-                    		best_ese = current_ese;
-                    		defender.threshold = meta.v;
+                        best_ese = current_ese;
+                        defender.threshold = meta.v;
                 	}
-		}
+		        }
             }
-	}
-   }
+	    }
+    }
 }
 
 std::mutex CART::mtx;
@@ -144,7 +144,7 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
     {
         locations[i].r = R[i];
         bool ofb = static_cast<bool>(rand() % 2);
-	locations[i].ofb = ofb;
+	    locations[i].ofb = ofb;
     }
 	
     map<uint32_t, uint32_t> selectFeatMap;
@@ -167,7 +167,7 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
         for(uint32_t i = 0; i < nr_instance; ++i)
         {
             Location &location = locations[i];
-	    if(location.ofb == true) continue;
+	        if(location.ofb == true) continue;
             if(tnodes[location.tnode_idx].shrinked) continue;
 
             Meta &meta = metas0[location.tnode_idx-offset];
@@ -187,7 +187,7 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
                 defenders[f][j].ese = ese;
         }
 
-	scan(prob, locations, tnodes, metas0, defenders, offset, selectFeatMap);
+	    scan(prob, locations, tnodes, metas0, defenders, offset, selectFeatMap);
 
         for(uint32_t f = 0; f < nr_leaf; ++f)
         {
@@ -217,14 +217,14 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
             if(tnode.feature == -1) tnode.shrinked = true;
             if(tnode.shrinked) continue;
 
-	    if(prob.inst2features[i].count(tnode.feature) == 0)
-		tnode_idx = 2*tnode_idx;
-	    else if(prob.inst2features[i][tnode.feature] < tnode.threshold)
-		tnode_idx = 2*tnode_idx;
-	    else
-		tnode_idx = 2*tnode_idx+1; 
+            if(prob.inst2features[i].count(tnode.feature) == 0)
+                tnode_idx = 2*tnode_idx;
+            else if(prob.inst2features[i][tnode.feature] < tnode.threshold)
+                tnode_idx = 2*tnode_idx;
+            else
+                tnode_idx = 2*tnode_idx+1; 
 
-	    location.tnode_idx = tnode_idx;
+            location.tnode_idx = tnode_idx;
         }
     }
 
@@ -232,30 +232,30 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
     for(uint32_t i = 0; i < nr_instance; ++i)
     {
         Location &location = locations[i];
-	if(location.ofb == true) continue;
+	    if(location.ofb == true) continue;
 
         uint32_t const tnode_idx = locations[i].tnode_idx;
-	tnodes[tnode_idx].capacity += 1;
+	    tnodes[tnode_idx].capacity += 1;
         tmp[tnode_idx][i] = R[i];
     }
 
     for(uint32_t tnode_idx = 1; tnode_idx < max_tnodes; ++tnode_idx)
     {
-	vector<double> newY(tmp[tnode_idx].size());
-	vector<double> newW(tmp[tnode_idx].size());
-	for(std::map<uint32_t, double>::iterator it = tmp[tnode_idx].begin(); it != tmp[tnode_idx].end(); ++it)
-	{
-		uint32_t i = it->first;
-		double z = it->second;
-		newY.push_back(z);
-		newW.push_back(1.0);
+        vector<double> newY(tmp[tnode_idx].size());
+        vector<double> newW(tmp[tnode_idx].size());
+        for(std::map<uint32_t, double>::iterator it = tmp[tnode_idx].begin(); it != tmp[tnode_idx].end(); ++it)
+        {
+            uint32_t i = it->first;
+            double z = it->second;
+            newY.push_back(z);
+            newW.push_back(1.0);
 
-	}
-	double val = medianw(newY, newW);
+        }
+        double val = medianw(newY, newW);
         tnodes[tnode_idx].gamma = val;
     }
 
-    #pragma omp parallel for schedule(static)
+    //#pragma omp parallel for schedule(static)
     for(uint32_t i = 0; i < nr_instance; ++i)
         F1[i] = tnodes[locations[i].tnode_idx].gamma;
 }
@@ -285,10 +285,10 @@ void GBDT::write(Problem &prob, vector<double> & F_Val, std::string const &path)
 
     uint32_t poscnt = 0;
     vector<std::pair<uint32_t, double>> instscorevec(prob.nr_instance);
-    #pragma omp parallel for schedule(static) reduction(+: poscnt)
+    //#pragma omp parallel for schedule(static) reduction(+: poscnt)
     for(uint32_t i = 0; i < prob.nr_instance; ++i)
     {
-	if(prob.Y[i] == 1) poscnt += 1;
+	    if(prob.Y[i] == 1) poscnt += 1;
         instscorevec[i] = pair<uint32_t, double>(i, F_Val[i]);
     }
     std::sort(instscorevec.begin(), instscorevec.end(), sort_by_v());
@@ -304,32 +304,30 @@ void GBDT::write(Problem &prob, vector<double> & F_Val, std::string const &path)
     std::ofstream outfile(path);
     for(uint32_t i = 0; i < instscorevec.size(); ++i)
     {
-	uint32_t instid = instscorevec[i].first;
-	string instance = prob.instidmap[instid];
+        uint32_t instid = instscorevec[i].first;
+        string instance = prob.instidmap[instid];
 
-	double val = instscorevec[i].second;
-	double label = prob.Y[instid];
-	//double gap = exp(label) - 1;
+        double val = instscorevec[i].second;
+        val = exp(val) - 1;
+        double label = prob.Y[instid];
+        label = exp(label) - 1;
 
-	double sij = exp(val) - 1 - prob.gama;
-	if (sij < 0) sij = 0;
-	//outfile << instance << "\t" << gap << "\t" << sij << std::endl;
-	outfile << instance << "," << sij << std::endl;
-
-	if (label == 1) {
-                score += belownegcnt * 1.0 / negcnt;
-		avgidx += i * 1.0 / poscnt;
-		predictposcnt += 1;
+        outfile << instance << "\t" << label << "\t" << val << std::endl;
+    
+		if (label == 1) {
+            score += belownegcnt * 1.0 / negcnt;
+            avgidx += i * 1.0 / poscnt;
+            predictposcnt += 1;
         } else {
-                belownegcnt -= 1;
+            belownegcnt -= 1;
         }
 
-	if (i == startpoint) {
-		pvcnt.push_back(i);
-		covcnt.push_back(predictposcnt);
-		startpoint *= 2;
-		//startpoint += 1000;
-	}
+        if (i == startpoint) {
+            pvcnt.push_back(i);
+            covcnt.push_back(predictposcnt);
+            startpoint *= 2;
+            //startpoint += 1000;
+        }
      }
      pvcnt.push_back(instscorevec.size());
      covcnt.push_back(predictposcnt);
@@ -357,37 +355,25 @@ void GBDT::fit(Problem &Tr, Problem &Va)
 
     double tr_logloss = 0;
     double tr_loss = 0;
-    #pragma omp parallel for schedule(static) reduction(+: tr_logloss, tr_loss)
+    //#pragma omp parallel for schedule(static) reduction(+: tr_logloss, tr_loss)
     for(uint32_t i = 0; i < Tr.nr_instance; ++i) 
     {
-	tr_logloss += abs(Tr.Y[i] - F_Tr[i]);
-	
-	double gap = Tr.Gap[i];
-	double sij = exp(F_Tr[i]) - 1 - Tr.gama;
-	//sij = F_Tr[i];
-	if (sij < 0) sij = 0;
-
-	tr_loss += abs(gap - sij);
+        tr_logloss += abs(exp(Tr.Y[i]) - exp(F_Tr[i]));
+        tr_loss += exp(Tr.Y[i]);
     }
+    tr_loss = tr_logloss / tr_loss;
     tr_logloss /= static_cast<double>(Tr.nr_instance);
-    tr_loss /= static_cast<double>(Tr.nr_instance);
 
     double va_logloss = 0;
     double va_loss = 0;
-    #pragma omp parallel for schedule(static) reduction(+: va_logloss, va_loss)
+    //#pragma omp parallel for schedule(static) reduction(+: va_logloss, va_loss)
     for(uint32_t i = 0; i < Va.nr_instance; ++i)
     {
-	va_logloss += abs(Va.Y[i] - F_Va[i]);
-
-	double gap = Va.Gap[i];
-	double sij = exp(F_Va[i]) - 1 - Tr.gama;
-	//sij = F_Va[i];
-	if (sij < 0) sij = 0;
-
-	va_loss += abs(gap - sij);
+        va_logloss += abs(exp(Va.Y[i]) - exp(F_Va[i]));
+        va_loss += exp(Va.Y[i]);
     }
+    va_loss = va_logloss / va_loss;
     va_logloss /= static_cast<double>(Va.nr_instance);
-    va_loss /= static_cast<double>(Va.nr_instance);
 
     cout << "Init F0:\t" << bias << endl;
     cout << "-1\t0\t" << tr_logloss << "\t" << va_logloss << "\t" << tr_loss << "\t" << va_loss << endl; 
@@ -399,12 +385,13 @@ void GBDT::fit(Problem &Tr, Problem &Va)
         std::vector<double> const &Y = Tr.Y;
         std::vector<double> R(Tr.nr_instance), F1(Tr.nr_instance);
 
-	double deta = 0.1;
-        #pragma omp parallel for schedule(static)
-        for(uint32_t i = 0; i < Tr.nr_instance; ++i) 
-	    if (Y[i] - F_Tr[i] >= deta) R[i] = 1;
-	    else if (Y[i] - F_Tr[i] < - deta) R[i] = -1;
-	    else R[i] = 0;
+	    double deta = 0.01;
+        //#pragma omp parallel for schedule(static)
+        for(uint32_t i = 0; i < Tr.nr_instance; ++i) {
+            if (Y[i] - F_Tr[i] >= deta) R[i] = deta;
+            else if (Y[i] - F_Tr[i] < - deta) R[i] = -deta;
+            else R[i] = Y[i] - F_Tr[i];
+        }
 
         //uint32_t treedepth = 1 + (t / 7);
         //uint32_t treedepth = 1 + (t / 30);
@@ -416,47 +403,37 @@ void GBDT::fit(Problem &Tr, Problem &Va)
 
         double tr_logloss = 0;
         double tr_loss = 0;
-        #pragma omp parallel for schedule(static) reduction(+: tr_logloss, tr_loss)
+        //#pragma omp parallel for schedule(static) reduction(+: tr_logloss, tr_loss)
         for(uint32_t i = 0; i < Tr.nr_instance; ++i)
         {
             F_Tr[i] += learningrate * F1[i];
-	    tr_logloss += abs(Tr.Y[i] - F_Tr[i]);
+	        tr_logloss += abs(exp(Tr.Y[i]) - exp(F_Tr[i]));
 
-	    double gap = Tr.Gap[i];
-	    double sij = exp(F_Tr[i]) - 1 - Tr.gama;
-	    //sij = F_Tr[i];
-	    if (sij < 0) sij = 0;
-	    	
-	    tr_loss += abs(gap - sij);
+	        tr_loss += exp(Tr.Y[i]);
         }
+        tr_loss = tr_logloss/tr_loss;
         tr_logloss /= static_cast<double>(Tr.nr_instance);
-        tr_loss /= static_cast<double>(Tr.nr_instance);
 
         double va_logloss = 0;
         double va_loss = 0;
-        #pragma omp parallel for schedule(static) reduction(+: va_logloss, va_loss)
+        //#pragma omp parallel for schedule(static) reduction(+: va_logloss, va_loss)
         for(uint32_t i = 0; i < Va.nr_instance; ++i)
         {
             std::map<uint32_t, double> x = Va.inst2features[i];
             std::pair<uint32_t, double> res = trees[t].predict(x);
             F_Va[i] += learningrate * res.second;
-	    va_logloss += abs(Va.Y[i] - F_Va[i]);
+	        va_logloss += abs(exp(Va.Y[i]) - exp(F_Va[i]));
 
-	    double gap = Va.Gap[i];
-	    double sij = exp(F_Va[i]) - 1 - Tr.gama;
-	    //sij = F_Va[i];
-	    if (sij < 0) sij = 0;
-
-	    va_loss += abs(gap - sij);
+    	    va_loss += exp(Va.Y[i]);
         }
+        va_loss = va_logloss / va_loss;
         va_logloss /= static_cast<double>(Va.nr_instance);
-        va_loss /= static_cast<double>(Va.nr_instance);
 
-	std::cout << t << "\t" << timer.toc() / (t + 1) << "\t" << tr_logloss << "\t" << va_logloss << "\t" << tr_loss << "\t" << va_loss << endl;
+	    std::cout << t << "\t" << timer.toc() / (t + 1) << "\t" << tr_logloss << "\t" << va_logloss << "\t" << tr_loss << "\t" << va_loss << endl;
     }
     write(Va, F_Va, Va_out_path);
     if (gbdtfeat == 1) 
-	getGBDTFeat(Tr, Va);
+	    getGBDTFeat(Tr, Va);
 }
 
 double GBDT::getGBDTFeat(Problem &Tr, Problem &Va) 
@@ -464,45 +441,45 @@ double GBDT::getGBDTFeat(Problem &Tr, Problem &Va)
     std::ofstream trainfeatfile(Tr.input_path + ".gbdtfeat");
     for(uint32_t i = 0; i < Tr.nr_instance; ++i) 
     {
-	std::map<uint32_t, double> x = Tr.inst2features[i];
-	std::vector<uint32_t> idxvec = get_indices(x);
-	string inst = Tr.instidmap[i];
-	trainfeatfile << inst << "\t" << Tr.Y[i] << "\t";
+        std::map<uint32_t, double> x = Tr.inst2features[i];
+        std::vector<uint32_t> idxvec = get_indices(x);
+        string inst = Tr.instidmap[i];
+        trainfeatfile << inst << "\t" << Tr.Y[i] << "\t";
 
-	map<uint32_t, double>& featuredict = Tr.inst2features[i];
-	for (map<uint32_t, double>::iterator fit = featuredict.begin(); fit != featuredict.end(); ++fit) 
-	{
-		uint32_t fid = fit->first;
-		string feat = Tr.id2featmap[fid];
-		double fval = fit->second;
-		trainfeatfile << feat << ":" << fval << "\t";
-	}
+        map<uint32_t, double>& featuredict = Tr.inst2features[i];
+        for (map<uint32_t, double>::iterator fit = featuredict.begin(); fit != featuredict.end(); ++fit) 
+        {
+            uint32_t fid = fit->first;
+            string feat = Tr.id2featmap[fid];
+            double fval = fit->second;
+            trainfeatfile << feat << ":" << fval << "\t";
+        }
 
-	for(int j = 0; j < idxvec.size(); j += 1)
-		trainfeatfile << "tr" << j << "no" << idxvec[j] << ":1\t";
-	trainfeatfile << endl;
+        for(int j = 0; j < idxvec.size(); j += 1)
+            trainfeatfile << "tr" << j << "no" << idxvec[j] << ":1\t";
+	    trainfeatfile << endl;
     }
 
     std::ofstream testfeatfile(Va.input_path + ".gbdtfeat");
     for(uint32_t i = 0; i < Va.nr_instance; ++i) 
     {
-	std::map<uint32_t, double> x = Va.inst2features[i];
-	std::vector<uint32_t> idxvec = get_indices(x);
-	string inst = Va.instidmap[i];
-	testfeatfile << inst << "\t" << Va.Y[i] << "\t";
+        std::map<uint32_t, double> x = Va.inst2features[i];
+        std::vector<uint32_t> idxvec = get_indices(x);
+        string inst = Va.instidmap[i];
+        testfeatfile << inst << "\t" << Va.Y[i] << "\t";
 
-	map<uint32_t, double>& featuredict = Va.inst2features[i];
-	for (map<uint32_t, double>::iterator fit = featuredict.begin(); fit != featuredict.end(); ++fit) 
-	{
-		uint32_t fid = fit->first;
-		string feat = Tr.id2featmap[fid];
-		double fval = fit->second;
-		testfeatfile << feat << ":" << fval << "\t";
-	}
+        map<uint32_t, double>& featuredict = Va.inst2features[i];
+        for (map<uint32_t, double>::iterator fit = featuredict.begin(); fit != featuredict.end(); ++fit) 
+        {
+            uint32_t fid = fit->first;
+            string feat = Tr.id2featmap[fid];
+            double fval = fit->second;
+            testfeatfile << feat << ":" << fval << "\t";
+        }
 
-	for(int j = 0; j < idxvec.size(); j += 1)
-		testfeatfile << "tr" << j << "no" << idxvec[j] << ":1\t";
-	testfeatfile << endl;
+        for(int j = 0; j < idxvec.size(); j += 1)
+            testfeatfile << "tr" << j << "no" << idxvec[j] << ":1\t";
+	    testfeatfile << endl;
     }
 
     return 0;

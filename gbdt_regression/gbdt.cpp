@@ -5,7 +5,7 @@
 #include <numeric>
 #include <algorithm>
 #include <thread>
-#include <omp.h>
+//#include <omp.h>
 #include <stdlib.h>
 
 #include "gbdt.h"
@@ -54,20 +54,20 @@ void scan(
     #pragma omp parallel for schedule(dynamic)
     for(uint32_t fid = 0; fid < prob.nr_field; fid += 1)
     {
-	const std::vector<std::pair<uint32_t, double>>& instancevec = prob.feat2sortinstances[fid];
+	    const std::vector<std::pair<uint32_t, double>>& instancevec = prob.feat2sortinstances[fid];
         std::vector<Meta> metas = metas0;
 
 	//if (selectFeatMap[fid] == 0) continue;
 
 	// Instance sort descending order
-	for(uint32_t i = 0; i < instancevec.size(); i += 1)
-	{
+        for(uint32_t i = 0; i < instancevec.size(); i += 1)
+        {
             const std::pair<uint32_t, double> & inst = instancevec[i];
-	    uint32_t instid = inst.first;
-	    double instval = inst.second;
+	        uint32_t instid = inst.first;
+	        double instval = inst.second;
 
             Location const &location = instlocations[instid];
-	    if(location.ofb == true) continue;
+	        if(location.ofb == true) continue;
 
             uint32_t tnode_idx = location.tnode_idx;
             if(tnodes[tnode_idx].shrinked) continue;
@@ -79,41 +79,41 @@ void scan(
             {
                 double const sr = meta.s - meta.sl;
                 uint32_t const nr = meta.n - meta.nl;
-		if (nr > minNodeCapacity && meta.nl > minNodeCapacity)
-		{
+                if (nr > minNodeCapacity && meta.nl > minNodeCapacity)
+                {
                 	double const current_ese = (meta.sl*meta.sl)/static_cast<double>(meta.nl) + (sr*sr)/static_cast<double>(nr);
                 	Defender &defender = defenders[f][fid];
                 	double &best_ese = defender.ese;
                 	if(current_ese > best_ese)
                 	{
-                    		best_ese = current_ese;
-                    		defender.threshold = meta.v;
+                        best_ese = current_ese;
+                        defender.threshold = meta.v;
                 	}
-		}
+                }
             }
 	
             meta.sl += location.r;
             ++meta.nl;
-	    meta.v = instval;
+	        meta.v = instval;
 	
             if(i == instancevec.size() - 1)
             {
                 double const sr = meta.s - meta.sl;
                 uint32_t const nr = meta.n - meta.nl;
-		if (nr > minNodeCapacity && meta.nl > minNodeCapacity)
-		{
+                if (nr > minNodeCapacity && meta.nl > minNodeCapacity)
+                {
                 	double const current_ese = (meta.sl*meta.sl)/static_cast<double>(meta.nl) + (sr*sr)/static_cast<double>(nr);
                 	Defender &defender = defenders[f][fid];
                 	double &best_ese = defender.ese;
                 	if(current_ese > best_ese)
                 	{
-                    		best_ese = current_ese;
-                    		defender.threshold = meta.v;
+                        best_ese = current_ese;
+                        defender.threshold = meta.v;
                 	}
-		}
+                }
             }
-	}
-   }
+	    }
+    }
 }
 
 std::mutex CART::mtx;
@@ -131,7 +131,7 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
     {
         locations[i].r = R[i];
         bool ofb = static_cast<bool>(rand() % 2);
-	locations[i].ofb = ofb;
+	    locations[i].ofb = ofb;
     }
 	
     map<uint32_t, uint32_t> selectFeatMap;
@@ -153,7 +153,7 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
         for(uint32_t i = 0; i < nr_instance; ++i)
         {
             Location &location = locations[i];
-	    if(location.ofb == true) continue;
+	        if(location.ofb == true) continue;
             if(tnodes[location.tnode_idx].shrinked) continue;
 
             Meta &meta = metas0[location.tnode_idx-offset];
@@ -163,7 +163,7 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
 
         std::vector<std::vector<Defender>> defenders(nr_leaf);
         for(uint32_t f = 0; f < nr_leaf; ++f)
-	    defenders[f].resize(nr_field);
+	        defenders[f].resize(nr_field);
 
         for(uint32_t f = 0; f < nr_leaf; ++f)
         {
@@ -173,7 +173,7 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
                 defenders[f][j].ese = ese;
         }
 
-	scan(prob, locations, tnodes, metas0, defenders, offset, selectFeatMap);
+	    scan(prob, locations, tnodes, metas0, defenders, offset, selectFeatMap);
 
         for(uint32_t f = 0; f < nr_leaf; ++f)
         {
@@ -192,7 +192,7 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
             }
         }
 
-        #pragma omp parallel for schedule(static)
+        //#pragma omp parallel for schedule(static)
         for(uint32_t i = 0; i < nr_instance; ++i)
         {
             Location &location = locations[i];
@@ -203,14 +203,14 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
             if(tnode.feature == -1) tnode.shrinked = true;
             if(tnode.shrinked) continue;
 
-	    if(prob.inst2features[i].count(tnode.feature) == 0)
-		tnode_idx = 2*tnode_idx;
-	    else if(prob.inst2features[i][tnode.feature] < tnode.threshold)
-		tnode_idx = 2*tnode_idx;
-	    else
-		tnode_idx = 2*tnode_idx+1; 
+            if(prob.inst2features[i].count(tnode.feature) == 0)
+                tnode_idx = 2*tnode_idx;
+            else if(prob.inst2features[i][tnode.feature] < tnode.threshold)
+                tnode_idx = 2*tnode_idx;
+            else
+                tnode_idx = 2*tnode_idx+1; 
 
-	    location.tnode_idx = tnode_idx;
+            location.tnode_idx = tnode_idx;
         }
     }
 
@@ -218,15 +218,15 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
     for(uint32_t i = 0; i < nr_instance; ++i)
     {
         Location &location = locations[i];
-	if(location.ofb == true) continue;
+        if(location.ofb == true) continue;
 
         double const r = locations[i].r;
         uint32_t const tnode_idx = locations[i].tnode_idx;
-	tnodes[tnode_idx].capacity += 1;
+        tnodes[tnode_idx].capacity += 1;
         tmp[tnode_idx].first += r;
-	tmp[tnode_idx].second += 1;
+        tmp[tnode_idx].second += 1;
         //tmp[tnode_idx].second += fabs(r)*(2-fabs(r));
-	//double pi = prob.Y[i] - r;
+        //double pi = prob.Y[i] - r;
         //tmp[tnode_idx].second += pi * (1 - pi);
     }
 
@@ -238,7 +238,7 @@ void CART::fit(Problem &prob, std::vector<double> &R, std::vector<double> &F1)
         tnodes[tnode_idx].gamma = (b <= 1e-12)? 0 : static_cast<double>(a/b);
     }
 
-    #pragma omp parallel for schedule(static)
+    //#pragma omp parallel for schedule(static)
     for(uint32_t i = 0; i < nr_instance; ++i)
         F1[i] = tnodes[locations[i].tnode_idx].gamma;
 }
@@ -337,7 +337,7 @@ void GBDT::fit(Problem &Tr, Problem &Va)
 
         #pragma omp parallel for schedule(static)
         for(uint32_t i = 0; i < Tr.nr_instance; ++i) 
-	    R[i] = Y[i] - F_Tr[i];
+	        R[i] = Y[i] - F_Tr[i];
 
         uint32_t treedepth = 1 + (t / 7);
         if(treedepth > this->max_depth) treedepth = this->max_depth;
@@ -347,34 +347,36 @@ void GBDT::fit(Problem &Tr, Problem &Va)
         trees[t].fit(Tr, R, F1);
 
         double Tr_mse = 0;
-        #pragma omp parallel for schedule(static) reduction(+: Tr_mse)
+        double Tr_y = 0;
+        //#pragma omp parallel for schedule(static) reduction(+: Tr_mse)
         for(uint32_t i = 0; i < Tr.nr_instance; ++i) 
         {
             F_Tr[i] += learningrate * F1[i];
 
-	    double yi = Tr.Y[i];
-	    Tr_mse += (yi - F_Tr[i]) * (yi - F_Tr[i]);
+            Tr_y += Tr.Y[i];
+            Tr_mse += abs(Tr.Y[i] - F_Tr[i]);
         }
-        Tr_mse /= static_cast<double>(Tr.nr_instance);
+        Tr_mse /= Tr_y;
 
         double Va_mse = 0;
-        #pragma omp parallel for schedule(static) reduction(+: Va_mse)
+        double Va_y = 0;
+        //#pragma omp parallel for schedule(static) reduction(+: Va_mse)
         for(uint32_t i = 0; i < Va.nr_instance; ++i)
         {
             std::map<uint32_t, double> x = Va.inst2features[i];
             std::pair<uint32_t, double> res = trees[t].predict(x);
             F_Va[i] += learningrate * res.second;
 	
-	    double yi = Va.Y[i];
-	    Va_mse += (yi - F_Va[i]) * (yi - F_Va[i]);
+            Va_y += Va.Y[i];
+            Va_mse += abs(Va.Y[i] - F_Va[i]);
         }
-        Va_mse /= static_cast<double>(Va.nr_instance);
+        Va_mse /= Va_y;
 
-	std::cout << t << "\t" << timer.toc() / (t + 1)  << "\t" << Tr_mse << "\t" << Va_mse <<endl;
+        std::cout << t << "\t" << timer.toc() / (t + 1)  << "\t" << Tr_mse << "\t" << Va_mse <<endl;
     }
     write(Va, F_Va, Va_out_path);
     if (gbdtfeat == 1) 
-	getGBDTFeat(Tr, Va);
+	    getGBDTFeat(Tr, Va);
 }
 
 double GBDT::getGBDTFeat(Problem &Tr, Problem &Va) 
@@ -382,45 +384,45 @@ double GBDT::getGBDTFeat(Problem &Tr, Problem &Va)
     std::ofstream trainfeatfile(Tr.input_path + ".gbdtfeat");
     for(uint32_t i = 0; i < Tr.nr_instance; ++i) 
     {
-	std::map<uint32_t, double> x = Tr.inst2features[i];
-	std::vector<uint32_t> idxvec = get_indices(x);
-	string inst = Tr.instidmap[i];
-	trainfeatfile << inst << "\t" << Tr.Y[i] << "\t";
+        std::map<uint32_t, double> x = Tr.inst2features[i];
+        std::vector<uint32_t> idxvec = get_indices(x);
+        string inst = Tr.instidmap[i];
+        trainfeatfile << inst << "\t" << Tr.Y[i] << "\t";
 
-	map<uint32_t, double>& featuredict = Tr.inst2features[i];
-	for (map<uint32_t, double>::iterator fit = featuredict.begin(); fit != featuredict.end(); ++fit) 
-	{
-		uint32_t fid = fit->first;
-		string feat = Tr.id2featmap[fid];
-		double fval = fit->second;
-		trainfeatfile << feat << ":" << fval << "\t";
-	}
+        map<uint32_t, double>& featuredict = Tr.inst2features[i];
+        for (map<uint32_t, double>::iterator fit = featuredict.begin(); fit != featuredict.end(); ++fit) 
+        {
+            uint32_t fid = fit->first;
+            string feat = Tr.id2featmap[fid];
+            double fval = fit->second;
+            trainfeatfile << feat << ":" << fval << "\t";
+        }
 
-	for(int j = 0; j < idxvec.size(); j += 1)
-		trainfeatfile << "tr" << j << "no" << idxvec[j] << ":1\t";
-	trainfeatfile << endl;
+        for(int j = 0; j < idxvec.size(); j += 1)
+            trainfeatfile << "tr" << j << "no" << idxvec[j] << ":1\t";
+        trainfeatfile << endl;
     }
 
     std::ofstream testfeatfile(Va.input_path + ".gbdtfeat");
     for(uint32_t i = 0; i < Va.nr_instance; ++i) 
     {
-	std::map<uint32_t, double> x = Va.inst2features[i];
-	std::vector<uint32_t> idxvec = get_indices(x);
-	string inst = Va.instidmap[i];
-	testfeatfile << inst << "\t" << Va.Y[i] << "\t";
+        std::map<uint32_t, double> x = Va.inst2features[i];
+        std::vector<uint32_t> idxvec = get_indices(x);
+        string inst = Va.instidmap[i];
+        testfeatfile << inst << "\t" << Va.Y[i] << "\t";
 
-	map<uint32_t, double>& featuredict = Va.inst2features[i];
-	for (map<uint32_t, double>::iterator fit = featuredict.begin(); fit != featuredict.end(); ++fit) 
-	{
-		uint32_t fid = fit->first;
-		string feat = Tr.id2featmap[fid];
-		double fval = fit->second;
-		testfeatfile << feat << ":" << fval << "\t";
-	}
+        map<uint32_t, double>& featuredict = Va.inst2features[i];
+        for (map<uint32_t, double>::iterator fit = featuredict.begin(); fit != featuredict.end(); ++fit) 
+        {
+            uint32_t fid = fit->first;
+            string feat = Tr.id2featmap[fid];
+            double fval = fit->second;
+            testfeatfile << feat << ":" << fval << "\t";
+        }
 
-	for(int j = 0; j < idxvec.size(); j += 1)
-		testfeatfile << "tr" << j << "no" << idxvec[j] << ":1\t";
-	testfeatfile << endl;
+        for(int j = 0; j < idxvec.size(); j += 1)
+            testfeatfile << "tr" << j << "no" << idxvec[j] << ":1\t";
+        testfeatfile << endl;
     }
 
     return 0;
